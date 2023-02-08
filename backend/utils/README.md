@@ -1,1 +1,0 @@
-# Contains code shared across the backend project

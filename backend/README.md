@@ -2,6 +2,14 @@
 
 This is the backend code for `PostgreScrutiniser`.
 
+## Starting project
+
+### Backend
+
+```
+go run ./backend/
+```
+
 ## Development
 
 Below are details concerning development of this project

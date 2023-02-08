@@ -1,10 +1,12 @@
-package backend
+package main
 
 import (
 	"flag"
 	// "github.com/Globys031/plotzemis/go/auth"
 	// "github.com/Globys031/plotzemis/go/db"
 	// "github.com/Globys031/plotzemis/go/routes"
+	"github.com/Globys031/PostgreScrutiniser/backend/controllers"
+	// "github.com/Globys031/PostgreScrutiniser/controllers"
 )
 
 var (
@@ -15,6 +17,10 @@ var (
 
 func main() {
 	flag.Parse() // parses the above flag variables
+
+	println("damn, haven't touched go in ages")
+	controllers.placeholderFunction()
+
 	//////////////////////////
 	// Loads configs
 	// config, err := LoadConfig()
