@@ -2,7 +2,8 @@ package main
 
 import (
 	"flag"
-	"github.com/Globys031/PostgreScrutiniser/backend/controllers"
+
+	"github.com/Globys031/PostgreScrutiniser/backend/cmd"
 )
 
 var (
@@ -14,8 +15,7 @@ var (
 func main() {
 	flag.Parse() // parses the above flag variables
 
-	println("damn, haven't touched go in ages")
-	controllers.PlaceholderFunction()
+	cmd.RunChecks()
 
 	//////////////////////////
 	// Loads configs

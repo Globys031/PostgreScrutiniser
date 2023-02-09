@@ -1,6 +1,6 @@
 // All routes are exposed here
 
-package routes
+package web
 
 import (
 	"github.com/gin-contrib/cors"

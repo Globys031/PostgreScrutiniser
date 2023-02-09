@@ -1,3 +1,3 @@
 // Code for Operating System configuration
 
-package controllers
+package cmd
