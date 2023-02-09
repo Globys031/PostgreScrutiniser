@@ -1,4 +1,4 @@
-module github.com/Globys031/PostgreScrutiniser
+module github.com/Globys031/PostgreScrutiniser/backend
 
 go 1.20
 

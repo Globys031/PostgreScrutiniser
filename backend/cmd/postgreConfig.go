@@ -2,6 +2,6 @@
 
 package controllers
 
-func placeholderFunction() {
+func PlaceholderFunction() {
 	println("Ayyy, it worked")
 }
