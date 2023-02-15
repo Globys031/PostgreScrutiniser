@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	sysctl "github.com/lorenzosaino/go-sysctl"
+
 	"github.com/Globys031/PostgreScrutiniser/backend/utils"
 )
 
@@ -21,14 +23,10 @@ import (
 //
 // [root@localhost backend]# grep trust /var/lib/pgsql/15/data/pg_hba.conf
 
-// Kai darysiu API pridet prie grazinamo parametro kad:
-// requiresRestart: true/false
-// requiresReboot: true/false
-// ir tada pridesiu mygtuka kad parestartuot postgresql arba parebootint serveri
-
-// To do: idet funkcija kuri check'us perkonvertuotu i multiples of 2
-
 type resourceSetting struct {
+	// TO DO: change minVal, maxVal, enumVals to something that's not string
+	// Consider having separate maps for differnent vartypes
+
 	name     string // name of the setting
 	value    string // value of the setting
 	vartype  string // what type value is (boolean, integer, enum, etc...)
@@ -37,10 +35,13 @@ type resourceSetting struct {
 	maxVal   string // Maximum allowed value (needed for validation)
 	enumVals string // If an enumrator, this stores enum values
 
-	suggestedValue  string // Value that will be suggested after running check
-	passed          bool   // If a new value is suggested, this will be set to false
-	requiresRestart bool   // Specifies if applying suggestion requires restarting postgresql
-	requiresReboot  bool   // Specifies if applying suggestion requires rebooting eerver
+	suggestedValue string // Value that will be suggested after running check
+	details        string // Details informing why a value was suggested
+	// Specifies if applying suggestion requires rebooting eerver
+	// If set to false, but a suggestedValue has been applied, will do
+	// `pg_ctl reload`
+	// https://www.postgresql.org/docs/15/app-pg-ctl.html
+	requiresReboot bool
 }
 
 type configuration struct {
@@ -50,10 +51,6 @@ type configuration struct {
 	settings map[string]resourceSetting
 	// settings [34]string
 }
-
-// To avoid magic strings, will use these values to set resourceSetting.checkType
-const checkPassed = "passed"
-const checkFailed = "failed"
 
 func RunChecks() {
 	// user, pass := findPostgresCredentials();
@@ -67,13 +64,15 @@ func RunChecks() {
 
 	resourceSettings, err := getPGSettings()
 	conf := configuration{path: configFile, settings: resourceSettings}
+
+	///////////////////////////////
+	// Run checks
 	conf.checkSharedBuffers()
+	conf.checkHugePages()
 
-	fmt.Println("RunChecks() shared_buffers.value: ", conf.settings["shared_buffers"].value)
-	fmt.Println("RunChecks() shared_buffers.suggestedValue: ", conf.settings["shared_buffers"].suggestedValue)
-
-	// // Run checks
-	// conf.checkSharedBuffers()
+	// setting := "huge_pages"
+	// fmt.Printf("RunChecks() %s.value: %s\n", setting, conf.settings[setting].value)
+	// fmt.Printf("RunChecks() %s.suggestedValue: %s\n", setting, conf.settings[setting].suggestedValue)
 
 }
 
@@ -191,8 +190,31 @@ func getPGSettings() (map[string]resourceSetting, error) {
 		}
 	}
 
-	// Return the map of settings
+	// Return map of runtime config settings
 	return settingsMap, nil
+}
+
+// Function used to ensure that parameter value being set
+// is amongst options returned by `postgres -c "select enumvals...`
+// Helps avoid exposing incorrect setting suggestions to users.
+func setEnumTypeSuggestedValue(setting *resourceSetting, valueToSet string) error {
+	// 1. Extract enumerator values from something like `{off,on,try}`
+	start := strings.Index(setting.enumVals, "{")
+	end := strings.Index(setting.enumVals, "}")
+	if start == -1 || end == -1 {
+		return fmt.Errorf("Could not extract enumerator values from enumvals")
+	}
+
+	enumVals := strings.Split(setting.enumVals[start+1:end], ",")
+
+	// 2. Set value we're trying to set if it exists
+	for _, enumValue := range enumVals {
+		if enumValue == valueToSet {
+			setting.suggestedValue = valueToSet
+			return nil
+		}
+	}
+	return fmt.Errorf("There is no %s in setting's %s enumerator %s", valueToSet, setting.name, setting.enumVals)
 }
 
 ////////////////////////////////////////////////////////
@@ -225,6 +247,7 @@ func (conf *configuration) checkSharedBuffers() error {
 	// If total server memory > 1GB, suggest 25% of total server RAM
 	if totalMemory > GigabyteInBytes {
 		suggestion = totalMemoryConverted * 0.25
+		sharedBuffers.details = "Total server memory > 1GB. Suggest using 25% of total server RAM"
 	} else { // Else suggest 30% of what memory is currently available on the server
 		availableMemory, err := utils.GetAvailableMemory()
 		if err != nil {
@@ -235,7 +258,8 @@ func (conf *configuration) checkSharedBuffers() error {
 		if err != nil {
 			return err
 		}
-		suggestion = availableMemoryConverted * 0.25
+		suggestion = availableMemoryConverted * 0.30
+		sharedBuffers.details = "Total server memory < 1GB. Suggest using 30% of available RAM"
 
 		// Suggested value cannot be lower than 128MB
 		lowestRecommendedValueAsString := strconv.FormatFloat(float64(lowestRecommendedValue), 'f', -1, 32)
@@ -245,17 +269,55 @@ func (conf *configuration) checkSharedBuffers() error {
 		}
 		if suggestion < lowestRecommendedValue {
 			suggestion = lowestRecommendedValue
+			sharedBuffers.details = "Server lacks available memory. Lowest recommended value is 128MB"
 		}
 	}
 
 	// Round suggestion to power of 2 and make sure there's no decimal point
 	roundedSuggestion := utils.RoundToPowerOf2(int(suggestion))
 	sharedBuffers.suggestedValue = strconv.Itoa(roundedSuggestion)
-
 	// https://www.postgresql.org/docs/current/runtime-config-resource.html
 	// "This parameter can only be set at server start."
 	sharedBuffers.requiresReboot = true
-	sharedBuffers.requiresRestart = false
 	conf.settings["shared_buffers"] = sharedBuffers
+	return nil
+}
+
+// https://www.postgresql.org/docs/current/runtime-config-resource.html
+// "This parameter can only be set at server start."
+
+// Checks huge_pages
+func (conf *configuration) checkHugePages() error {
+	hugePages := conf.settings["huge_pages"]
+
+	fmt.Println(hugePages.enumVals)
+
+	// Get nr_hugepages value
+	kernelPagesString, err := sysctl.Get("vm.nr_hugepages")
+	if err != nil {
+		return err
+	}
+	kernelNrHugePages, err := strconv.Atoi(kernelPagesString)
+
+	// if it's not set in kernel, no point in having hugePages set to on/try
+	if kernelNrHugePages == 0 {
+		hugePages.details = "Kernel parameter nr_hugepages is set to 0. Because of that, PostgreSQL cannot request huge pages"
+		setEnumTypeSuggestedValue(&hugePages, "off")
+
+		conf.settings["huge_pages"] = hugePages
+		return nil
+	}
+
+	if hugePages.value == "on" {
+		hugePages.details = "huge_pages current value is equal to 'on'. Failure to request huge pages will prevent the server from starting up"
+		setEnumTypeSuggestedValue(&hugePages, "try")
+	} else if hugePages.value == "off" {
+		hugePages.details = "huge_pages current value is equal to 'off'. Use of huge pages results in smaller page tables and less CPU time spent on memory management, increasing performance"
+		setEnumTypeSuggestedValue(&hugePages, "try")
+	}
+
+	// If kernelNrHugePages > 0 and hugePages.suggestedValue = "try", make no suggestions
+
+	conf.settings["huge_pages"] = hugePages
 	return nil
 }

@@ -1,4 +1,4 @@
-// File for fetching how much memory (RAM/Disk memory) system has
+// File for system info
 
 package utils
 
@@ -15,7 +15,7 @@ func GetTotalMemory() (uint64, error) {
 		return 0, fmt.Errorf("Could not get total server memory")
 	}
 
-	fmt.Println("info.Totalram: ", info.Totalram)
+	// fmt.Println("info.Totalram: ", info.Totalram)
 
 	return info.Totalram, nil
 }
@@ -28,7 +28,7 @@ func GetAvailableMemory() (uint64, error) {
 		return 0, fmt.Errorf("Could not get total available memory on the server")
 	}
 
-	fmt.Println("info.Freeram: ", info.Freeram)
+	// fmt.Println("info.Freeram: ", info.Freeram)
 
 	return info.Freeram, nil
 }
