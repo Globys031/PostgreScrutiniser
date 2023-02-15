@@ -23,6 +23,17 @@ import (
 //
 // [root@localhost backend]# grep trust /var/lib/pgsql/15/data/pg_hba.conf
 
+// TO DO:
+// also return documentation for every setting
+
+// TO DO:
+// Tam tikri grazins tik general recommendations (ties kurie virs funkcijos)
+// pamarkinti "GENERALREC"
+// Pasvarstyt kaip front'e idet... Gal padaryt tris boxes kur
+// auksciausiai yra: "found %{n} appliable suggestions"
+// zemiau: General recommendations %{n}
+// zemiausiai: Passed without suggestions %{n}
+
 type resourceSetting struct {
 	// TO DO: change minVal, maxVal, enumVals to something that's not string
 	// Consider having separate maps for differnent vartypes
@@ -37,11 +48,12 @@ type resourceSetting struct {
 
 	suggestedValue string // Value that will be suggested after running check
 	details        string // Details informing why a value was suggested
-	// Specifies if applying suggestion requires rebooting eerver
+	// Specifies if applying suggestion requires rebooting postgresql server
 	// If set to false, but a suggestedValue has been applied, will do
-	// `pg_ctl reload`
+	// `pg_ctl reload` automatically
 	// https://www.postgresql.org/docs/15/app-pg-ctl.html
-	requiresReboot bool
+	// TO DO: check to confirm docs are referring to restarting postgresql, not the server itself
+	requiresRestart bool
 }
 
 type configuration struct {
@@ -70,8 +82,10 @@ func RunChecks() {
 	conf.checkSharedBuffers()
 	conf.checkHugePages()
 	conf.checkHugePageSize()
+	conf.checkTempBuffers()
+	conf.checkMaxPreparedTransactions()
 
-	// setting := "huge_page_size"
+	// setting := "max_prepared_transactions"
 	// fmt.Printf("RunChecks() %s.value: %s\n", setting, conf.settings[setting].value)
 	// fmt.Printf("RunChecks() %s.suggestedValue: %s\n", setting, conf.settings[setting].suggestedValue)
 
@@ -195,6 +209,52 @@ func getPGSettings() (map[string]resourceSetting, error) {
 	return settingsMap, nil
 }
 
+func getSpecificPGSetting(setting string) (*resourceSetting, error) {
+	formattedArg := fmt.Sprintf("select name,setting,vartype,unit,min_val,max_val,enumvals from pg_settings WHERE name = '%s'", setting)
+
+	// Execute command to fetch postgre setting
+	cmd := exec.Command("psql", "-U", "postgres", "-c", formattedArg)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+
+	// This will store the final result of the setting to be restored
+	var returnSetting resourceSetting
+
+	// Use bufio.NewScanner to read the output line by line until we get the line with setting
+	scanner := bufio.NewScanner(strings.NewReader(string(out)))
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		match, _ := regexp.MatchString(setting, line)
+		if match {
+			fmt.Println("line: ", line)
+
+			fields := strings.Split(line, "|")
+			name := strings.TrimSpace(fields[0])
+			value := strings.TrimSpace(fields[1])
+			vartype := strings.TrimSpace(fields[2])
+			unit := strings.TrimSpace(fields[3])
+			minVal := strings.TrimSpace(fields[4])
+			maxVal := strings.TrimSpace(fields[5])
+			enumVals := strings.TrimSpace(fields[6])
+
+			returnSetting = resourceSetting{
+				name:     name,     // name of the setting
+				value:    value,    // value of the setting
+				vartype:  vartype,  // what type value is (boolean, integer, enum, etc...)
+				unit:     unit,     // s, ms, kB, 8kB, etc...
+				minVal:   minVal,   // Minimum allowed value (needed for validation)
+				maxVal:   maxVal,   // Maximum allowed value (needed for validation)
+				enumVals: enumVals, // If an enumrator, this stores enum values
+			}
+		}
+	}
+
+	return &returnSetting, nil
+}
+
 // Function used to ensure that parameter value being set
 // is amongst options returned by `postgres -c "select enumvals...`
 // Helps avoid exposing incorrect setting suggestions to users.
@@ -279,15 +339,13 @@ func (conf *configuration) checkSharedBuffers() error {
 	sharedBuffers.suggestedValue = strconv.Itoa(roundedSuggestion)
 	// https://www.postgresql.org/docs/current/runtime-config-resource.html
 	// "This parameter can only be set at server start."
-	sharedBuffers.requiresReboot = true
+	sharedBuffers.requiresRestart = true
 	conf.settings["shared_buffers"] = sharedBuffers
 	return nil
 }
 
 func (conf *configuration) checkHugePages() error {
 	hugePages := conf.settings["huge_pages"]
-
-	fmt.Println(hugePages.enumVals)
 
 	// Get nr_hugepages value
 	kernelPagesString, err := sysctl.Get("vm.nr_hugepages")
@@ -339,6 +397,59 @@ func (conf *configuration) checkHugePageSize() error {
 		hugePageSize.details = "Current huge_page_size value is set to a non 0 value. To prevent fragmentation, the same huge page size as the one set in your Linux kernel should be used. When set to 0, the default huge page size on the system will be used."
 	}
 
+	hugePageSize.requiresRestart = true
 	conf.settings["huge_page_size"] = hugePageSize
+	return nil
+}
+
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+
+// GENERALREC
+func (conf *configuration) checkTempBuffers() error {
+	tempBuffers := conf.settings["temp_buffers"]
+
+	currentValue, err := strconv.ParseUint(tempBuffers.value, 10, 64)
+	if err != nil {
+		return err
+	}
+	currentValueAsString := strconv.FormatUint(currentValue, 10)
+	currentValueConverted, err := utils.ConvertBasedOnUnit(currentValueAsString, "8kB", tempBuffers.unit)
+	if err != nil {
+		return err
+	}
+	if currentValueConverted > 1024 { // 1024 8kB is equivalent to 8MB
+		tempBuffers.details = "Current temp_buffers value is set to more than 8MB. If there are multiple databases used by different application, consider changing this setting per database. It is recommended to increase this value only for applications that rely heavily on temporary tables"
+	} else if currentValueConverted < 1024 {
+		tempBuffers.details = "Current temp_buffers value is set to less than 8MB. The cost of setting a large value in sessions that do not actually need many temporary buffers is only a buffer descriptor, or about 64 bytes. Consider increasing this to the recommended default value"
+
+		convertedDefault, err := utils.ConvertBasedOnUnit("1024", "8kB", tempBuffers.unit)
+		if err != nil {
+			return err
+		}
+		tempBuffers.suggestedValue = strconv.FormatFloat(float64(convertedDefault), 'f', -1, 32)
+	}
+
+	conf.settings["temp_buffers"] = tempBuffers
+	return nil
+}
+
+// GENERALREC
+func (conf *configuration) checkMaxPreparedTransactions() error {
+	maxPreparedTransactions := conf.settings["max_prepared_transactions"]
+	maxConnections, err := getSpecificPGSetting("max_connections")
+	if err != nil {
+		return err
+	}
+
+	if maxPreparedTransactions.value == "0" {
+		maxPreparedTransactions.details = " If you are using prepared transactions, you will probably want max_prepared_transactions to be at least as large as max_connections, so that every session can have a prepared transaction pending."
+		maxPreparedTransactions.suggestedValue = maxConnections.value
+	}
+
+	maxPreparedTransactions.requiresRestart = true
+	conf.settings["max_prepared_transactions"] = maxPreparedTransactions
 	return nil
 }
