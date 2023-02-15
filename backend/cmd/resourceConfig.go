@@ -5,10 +5,12 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
+
+	"github.com/Globys031/PostgreScrutiniser/backend/utils"
 )
 
 // TO DO:
@@ -19,6 +21,13 @@ import (
 //
 // [root@localhost backend]# grep trust /var/lib/pgsql/15/data/pg_hba.conf
 
+// Kai darysiu API pridet prie grazinamo parametro kad:
+// requiresRestart: true/false
+// requiresReboot: true/false
+// ir tada pridesiu mygtuka kad parestartuot postgresql arba parebootint serveri
+
+// To do: idet funkcija kuri check'us perkonvertuotu i multiples of 2
+
 type resourceSetting struct {
 	name     string // name of the setting
 	value    string // value of the setting
@@ -28,7 +37,10 @@ type resourceSetting struct {
 	maxVal   string // Maximum allowed value (needed for validation)
 	enumVals string // If an enumrator, this stores enum values
 
-	suggestedValue string // Value that will be suggested after running check
+	suggestedValue  string // Value that will be suggested after running check
+	passed          bool   // If a new value is suggested, this will be set to false
+	requiresRestart bool   // Specifies if applying suggestion requires restarting postgresql
+	requiresReboot  bool   // Specifies if applying suggestion requires rebooting eerver
 }
 
 type configuration struct {
@@ -38,6 +50,10 @@ type configuration struct {
 	settings map[string]resourceSetting
 	// settings [34]string
 }
+
+// To avoid magic strings, will use these values to set resourceSetting.checkType
+const checkPassed = "passed"
+const checkFailed = "failed"
 
 func RunChecks() {
 	// user, pass := findPostgresCredentials();
@@ -52,6 +68,9 @@ func RunChecks() {
 	resourceSettings, err := getPGSettings()
 	conf := configuration{path: configFile, settings: resourceSettings}
 	conf.checkSharedBuffers()
+
+	fmt.Println("RunChecks() shared_buffers.value: ", conf.settings["shared_buffers"].value)
+	fmt.Println("RunChecks() shared_buffers.suggestedValue: ", conf.settings["shared_buffers"].suggestedValue)
 
 	// // Run checks
 	// conf.checkSharedBuffers()
@@ -176,50 +195,67 @@ func getPGSettings() (map[string]resourceSetting, error) {
 	return settingsMap, nil
 }
 
-////////////////////////////
+////////////////////////////////////////////////////////
 // Configuration functions
+////////////////////////////////////////////////////////
 
-// func (conf *configuration) checkSharedBuffers(string, error) {
+// Checks what unit is used for shared_buffers, applies necessary conversions
+// and sets final suggestion as a shared_buffers unit to closest value that's power of 2
+func (conf *configuration) checkSharedBuffers() error {
+	var suggestion float32
+	var lowestRecommendedValue float32 = 128 // Cannot suggest value that is lower than 128MB
+	var GigabyteInBytes uint64 = 1073741824  // 1GB
+	sharedBuffers := conf.settings["shared_buffers"]
 
-// }
+	// 1. Get total server memory
+	totalMemory, err := utils.GetTotalMemory()
+	if err != nil {
+		return err
+	}
 
-// func (conf *configuration) setSharedBuffers(filepath string) error {
-// 	f, err := os.OpenFile(filepath, os.O_RDONLY, 0)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer f.Close()
+	// 2. Convert total server memory to a unit that's used by shared_buffers
+	totalMemoryAsString := strconv.FormatUint(totalMemory, 10)
+	totalMemoryConverted, err := utils.ConvertBasedOnUnit(totalMemoryAsString, "B", sharedBuffers.unit)
+	if err != nil {
+		return err
+	}
 
-// 	lines := []string{}
-// 	scanner := bufio.NewScanner(f)
-// 	for scanner.Scan() {
-// 		line := scanner.Text()
-// 		if strings.HasPrefix(line, "shared_buffers") {
-// 			line = "shared_buffers = 10MB"
-// 		}
-// 		lines = append(lines, line)
-// 	}
+	// 3. Suggest value that's n% memory depending on how much total and free memory we have
+	//
+	// If total server memory > 1GB, suggest 25% of total server RAM
+	if totalMemory > GigabyteInBytes {
+		suggestion = totalMemoryConverted * 0.25
+	} else { // Else suggest 30% of what memory is currently available on the server
+		availableMemory, err := utils.GetAvailableMemory()
+		if err != nil {
+			return err
+		}
+		availableMemoryAsString := strconv.FormatUint(availableMemory, 10)
+		availableMemoryConverted, err := utils.ConvertBasedOnUnit(availableMemoryAsString, "B", sharedBuffers.unit)
+		if err != nil {
+			return err
+		}
+		suggestion = availableMemoryConverted * 0.25
 
-// 	if err := scanner.Err(); err != nil {
-// 		return err
-// 	}
+		// Suggested value cannot be lower than 128MB
+		lowestRecommendedValueAsString := strconv.FormatFloat(float64(lowestRecommendedValue), 'f', -1, 32)
+		lowestRecommendedValue, err = utils.ConvertBasedOnUnit(lowestRecommendedValueAsString, "MB", sharedBuffers.unit)
+		if err != nil {
+			return err
+		}
+		if suggestion < lowestRecommendedValue {
+			suggestion = lowestRecommendedValue
+		}
+	}
 
-// 	if err := f.Truncate(0); err != nil {
-// 		return err
-// 	}
-// 	if _, err := f.Seek(0, 0); err != nil {
-// 		return err
-// 	}
+	// Round suggestion to power of 2 and make sure there's no decimal point
+	roundedSuggestion := utils.RoundToPowerOf2(int(suggestion))
+	sharedBuffers.suggestedValue = strconv.Itoa(roundedSuggestion)
 
-// 	w := bufio.NewWriter(f)
-// 	for _, line := range lines {
-// 		if _, err := w.WriteString(line + "\n"); err != nil {
-// 			return err
-// 		}
-// 	}
-// 	if err := w.Flush(); err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
+	// https://www.postgresql.org/docs/current/runtime-config-resource.html
+	// "This parameter can only be set at server start."
+	sharedBuffers.requiresReboot = true
+	sharedBuffers.requiresRestart = false
+	conf.settings["shared_buffers"] = sharedBuffers
+	return nil
+}
