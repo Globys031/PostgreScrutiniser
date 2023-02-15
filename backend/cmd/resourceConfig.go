@@ -69,8 +69,9 @@ func RunChecks() {
 	// Run checks
 	conf.checkSharedBuffers()
 	conf.checkHugePages()
+	conf.checkHugePageSize()
 
-	// setting := "huge_pages"
+	// setting := "huge_page_size"
 	// fmt.Printf("RunChecks() %s.value: %s\n", setting, conf.settings[setting].value)
 	// fmt.Printf("RunChecks() %s.suggestedValue: %s\n", setting, conf.settings[setting].suggestedValue)
 
@@ -283,10 +284,6 @@ func (conf *configuration) checkSharedBuffers() error {
 	return nil
 }
 
-// https://www.postgresql.org/docs/current/runtime-config-resource.html
-// "This parameter can only be set at server start."
-
-// Checks huge_pages
 func (conf *configuration) checkHugePages() error {
 	hugePages := conf.settings["huge_pages"]
 
@@ -319,5 +316,29 @@ func (conf *configuration) checkHugePages() error {
 	// If kernelNrHugePages > 0 and hugePages.suggestedValue = "try", make no suggestions
 
 	conf.settings["huge_pages"] = hugePages
+	return nil
+}
+
+func (conf *configuration) checkHugePageSize() error {
+	hugePageSize := conf.settings["huge_page_size"]
+
+	// Get nr_hugepages value
+	kernelPagesString, err := sysctl.Get("vm.nr_hugepages")
+	if err != nil {
+		return err
+	}
+	kernelNrHugePages, err := strconv.Atoi(kernelPagesString)
+
+	// If vm.nr_hugepages is 0, then huge_page_size cannot be set
+	if kernelNrHugePages == 0 {
+		return nil
+	}
+
+	if hugePageSize.value != "0" {
+		hugePageSize.suggestedValue = "0"
+		hugePageSize.details = "Current huge_page_size value is set to a non 0 value. To prevent fragmentation, the same huge page size as the one set in your Linux kernel should be used. When set to 0, the default huge page size on the system will be used."
+	}
+
+	conf.settings["huge_page_size"] = hugePageSize
 	return nil
 }
