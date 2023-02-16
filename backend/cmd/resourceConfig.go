@@ -46,6 +46,8 @@ type resourceSetting struct {
 	// TO DO: change minVal, maxVal, enumVals to something that's not string
 	// Consider having separate maps for differnent vartypes
 
+	// TO DO: consider removing minVal, maxVal, vartype
+
 	name     string // name of the setting
 	value    string // value of the setting
 	vartype  string // what type value is (boolean, integer, enum, etc...)
@@ -93,10 +95,15 @@ func RunChecks(logger *utils.Logger) {
 	conf.checkMaintenanceWorkMem(logger)
 	conf.checkAutovacuumWorkMem(logger)
 	conf.checklogicalDecodingWorkMem(logger)
+	conf.checkMaxStackDepth(logger)
+	conf.checkSharedMemoryType(logger)
+	conf.checkDynamicSharedMemoryType(logger)
+	// conf.checkMinDynamicSharedMemory(logger)
 
-	setting := "logical_decoding_work_mem"
-	fmt.Printf("RunChecks() %s.value: %s\n", setting, conf.settings[setting].value)
-	fmt.Printf("RunChecks() %s.suggestedValue: %s\n", setting, conf.settings[setting].suggestedValue)
+	// setting := "min_dynamic_shared_memory"
+	// fmt.Printf("RunChecks() %s.value: %s\n", setting, conf.settings[setting].value)
+	// fmt.Printf("RunChecks() %s.suggestedValue: %s\n", setting, conf.settings[setting].suggestedValue)
+	// // // fmt.Printf("RunChecks() %s.details: %s\n", setting, conf.settings[setting].details)
 
 }
 
@@ -595,11 +602,6 @@ func (conf *configuration) checkMaintenanceWorkMem(logger *utils.Logger) error {
 	return nil
 }
 
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-
 func (conf *configuration) checkAutovacuumWorkMem(logger *utils.Logger) error {
 	// 1. Get autovacuum_work_mem, autovacumm_max_workers and available memory on server
 	autovacuumWorkMem := conf.settings["autovacuum_work_mem"]
@@ -673,6 +675,11 @@ func getWorkMemRelatedValues(logger *utils.Logger, setting *resourceSetting) (fl
 	return autovacuumMaxWorkers, availableMemoryConverted, nil
 }
 
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+
 func (conf *configuration) checklogicalDecodingWorkMem(logger *utils.Logger) error {
 	logicalDecodingWorkMem := conf.settings["logical_decoding_work_mem"]
 
@@ -706,5 +713,116 @@ func (conf *configuration) checklogicalDecodingWorkMem(logger *utils.Logger) err
 	}
 
 	conf.settings["logical_decoding_work_mem"] = logicalDecodingWorkMem
+	return nil
+}
+
+func (conf *configuration) checkMaxStackDepth(logger *utils.Logger) error {
+	maxStackDepth := conf.settings["max_stack_depth"]
+
+	// 1. Get system stack depth
+	systemStackDepth, err := utils.GetStackSize()
+	if err != nil {
+		logger.LogError("failed max_stack_depth check: " + err.Error())
+		return err
+	}
+
+	// 2. System set stack depth is not equal to max_stack_depth, suggest system stack depth
+	systemStackDepthAsUnit, err := utils.ConvertBasedOnUnit(utils.Uint64ToString(systemStackDepth), "B", maxStackDepth.unit)
+	if err != nil {
+		logger.LogError("failed max_stack_depth check: " + err.Error())
+		return err
+	}
+
+	maxStackDepthFloat32, err := utils.StringToFloat32(maxStackDepth.value)
+	if err != nil {
+		logger.LogError("failed max_stack_depth check: " + err.Error())
+		return err
+	}
+
+	if systemStackDepthAsUnit != maxStackDepthFloat32 {
+		maxStackDepth.suggestedValue = utils.Float32ToString(systemStackDepthAsUnit)
+		maxStackDepth.details = "The ideal setting for this parameter is the actual stack size limit enforced by the kernel (as set by ulimit -s or local equivalent)."
+	}
+
+	conf.settings["max_stack_depth"] = maxStackDepth
+	return nil
+}
+
+func (conf *configuration) checkSharedMemoryType(logger *utils.Logger) error {
+	sharedMemoryType := conf.settings["shared_memory_type"]
+
+	// Suggest boot_val (default) value
+
+	details := "sysv option is discouraged because it typically requires non-default kernel settings to allow for large allocations"
+	err := suggestDefault(&sharedMemoryType, details)
+	if err != nil {
+		logger.LogError("failed shared_memory_type check: " + err.Error())
+		return err
+	}
+
+	conf.settings["shared_memory_type"] = sharedMemoryType
+	return nil
+}
+
+func (conf *configuration) checkDynamicSharedMemoryType(logger *utils.Logger) error {
+	dynamicSharedMemoryType := conf.settings["dynamic_shared_memory_type"]
+
+	// Suggest boot_val (default) value
+
+	details := "Typically default value is best for this option"
+	err := suggestDefault(&dynamicSharedMemoryType, details)
+	if err != nil {
+		logger.LogError("failed dynamic_shared_memory_type check: " + err.Error())
+		return err
+	}
+
+	conf.settings["dynamic_shared_memory_type"] = dynamicSharedMemoryType
+	return nil
+}
+
+func suggestDefault(setting *resourceSetting, details string) error {
+	// 1. Get boot_val (default value) for setting
+	formattedArg := fmt.Sprintf("select name,boot_val from pg_settings WHERE name = '%s'", setting.name)
+	cmd := exec.Command("psql", "-U", "postgres", "-c", formattedArg)
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return err
+	}
+
+	var bootVal string
+	scanner := bufio.NewScanner(strings.NewReader(string(out)))
+	for scanner.Scan() {
+		line := scanner.Text()
+		match, _ := regexp.MatchString(setting.name, line)
+		if match {
+			fields := strings.Split(line, "|")
+			bootVal = strings.TrimSpace(fields[1])
+		}
+	}
+
+	// 2. Suggest boot_val (default) if not already set to that
+	if setting.value != bootVal {
+		setting.suggestedValue = bootVal
+		setting.details = details
+	}
+
+	return nil
+}
+
+// GENERALREC
+func (conf *configuration) checkMinDynamicSharedMemory(logger *utils.Logger) error {
+	minDynamicSharedMemory := conf.settings["min_dynamic_shared_memory"]
+
+	// 1. Check that parameters necessary for parallelisation are set
+	// https://www.postgresql.org/docs/current/when-can-parallel-query-be-used.html
+
+	// 2. If necesssary parameters are set and min_dynamic_shared_memory is not set to 8MB,
+	// then suggest 8MB + 1MB per additional max_parallel_workers_per_gather,
+	// rounded up to power of 2 (if default value of 2 is used, it will just suggest 8MB)
+
+	minDynamicSharedMemory.details = "In most cases it is best to leave this as the default 0"
+
+	conf.settings["min_dynamic_shared_memory"] = minDynamicSharedMemory
 	return nil
 }
