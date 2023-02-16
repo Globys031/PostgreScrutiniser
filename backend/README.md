@@ -42,3 +42,11 @@ Use this for declaring proper imports:
 ```
 x-go-type-import
 ```
+
+### References
+
+Below is a list of references used for creating the backend side of this application
+- https://www.postgresql.org/docs/
+- https://github.com/jberkus/annotated.conf
+- https://github.com/jfcoz/postgresqltuner/blob/master/postgresqltuner.pl
+- https://github.com/deepmap/oapi-codegen#overview

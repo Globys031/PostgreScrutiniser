@@ -84,10 +84,12 @@ func RunChecks() {
 	conf.checkHugePageSize()
 	conf.checkTempBuffers()
 	conf.checkMaxPreparedTransactions()
+	conf.checkWorkMem()
+	conf.checkHashMemMultiplier()
 
-	// setting := "max_prepared_transactions"
-	// fmt.Printf("RunChecks() %s.value: %s\n", setting, conf.settings[setting].value)
-	// fmt.Printf("RunChecks() %s.suggestedValue: %s\n", setting, conf.settings[setting].suggestedValue)
+	setting := "hash_mem_multiplier"
+	fmt.Printf("RunChecks() %s.value: %s\n", setting, conf.settings[setting].value)
+	fmt.Printf("RunChecks() %s.suggestedValue: %s\n", setting, conf.settings[setting].suggestedValue)
 
 }
 
@@ -229,8 +231,6 @@ func getSpecificPGSetting(setting string) (*resourceSetting, error) {
 
 		match, _ := regexp.MatchString(setting, line)
 		if match {
-			fmt.Println("line: ", line)
-
 			fields := strings.Split(line, "|")
 			name := strings.TrimSpace(fields[0])
 			value := strings.TrimSpace(fields[1])
@@ -297,7 +297,7 @@ func (conf *configuration) checkSharedBuffers() error {
 	}
 
 	// 2. Convert total server memory to a unit that's used by shared_buffers
-	totalMemoryAsString := strconv.FormatUint(totalMemory, 10)
+	totalMemoryAsString := utils.Uint64ToString(totalMemory)
 	totalMemoryConverted, err := utils.ConvertBasedOnUnit(totalMemoryAsString, "B", sharedBuffers.unit)
 	if err != nil {
 		return err
@@ -314,7 +314,7 @@ func (conf *configuration) checkSharedBuffers() error {
 		if err != nil {
 			return err
 		}
-		availableMemoryAsString := strconv.FormatUint(availableMemory, 10)
+		availableMemoryAsString := utils.Uint64ToString(availableMemory)
 		availableMemoryConverted, err := utils.ConvertBasedOnUnit(availableMemoryAsString, "B", sharedBuffers.unit)
 		if err != nil {
 			return err
@@ -323,7 +323,7 @@ func (conf *configuration) checkSharedBuffers() error {
 		sharedBuffers.details = "Total server memory < 1GB. Suggest using 30% of available RAM"
 
 		// Suggested value cannot be lower than 128MB
-		lowestRecommendedValueAsString := strconv.FormatFloat(float64(lowestRecommendedValue), 'f', -1, 32)
+		lowestRecommendedValueAsString := utils.Float32ToString(lowestRecommendedValue)
 		lowestRecommendedValue, err = utils.ConvertBasedOnUnit(lowestRecommendedValueAsString, "MB", sharedBuffers.unit)
 		if err != nil {
 			return err
@@ -335,8 +335,8 @@ func (conf *configuration) checkSharedBuffers() error {
 	}
 
 	// Round suggestion to power of 2 and make sure there's no decimal point
-	roundedSuggestion := utils.RoundToPowerOf2(int(suggestion))
-	sharedBuffers.suggestedValue = strconv.Itoa(roundedSuggestion)
+	roundedSuggestion := utils.RoundToPowerOf2(uint64(suggestion))
+	sharedBuffers.suggestedValue = utils.Uint64ToString(roundedSuggestion)
 	// https://www.postgresql.org/docs/current/runtime-config-resource.html
 	// "This parameter can only be set at server start."
 	sharedBuffers.requiresRestart = true
@@ -352,7 +352,7 @@ func (conf *configuration) checkHugePages() error {
 	if err != nil {
 		return err
 	}
-	kernelNrHugePages, err := strconv.Atoi(kernelPagesString)
+	kernelNrHugePages, err := utils.StringToInt(kernelPagesString)
 
 	// if it's not set in kernel, no point in having hugePages set to on/try
 	if kernelNrHugePages == 0 {
@@ -402,20 +402,15 @@ func (conf *configuration) checkHugePageSize() error {
 	return nil
 }
 
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-
 // GENERALREC
 func (conf *configuration) checkTempBuffers() error {
 	tempBuffers := conf.settings["temp_buffers"]
 
-	currentValue, err := strconv.ParseUint(tempBuffers.value, 10, 64)
+	currentValue, err := utils.StringToUint64(tempBuffers.value)
 	if err != nil {
 		return err
 	}
-	currentValueAsString := strconv.FormatUint(currentValue, 10)
+	currentValueAsString := utils.Uint64ToString(currentValue)
 	currentValueConverted, err := utils.ConvertBasedOnUnit(currentValueAsString, "8kB", tempBuffers.unit)
 	if err != nil {
 		return err
@@ -429,7 +424,7 @@ func (conf *configuration) checkTempBuffers() error {
 		if err != nil {
 			return err
 		}
-		tempBuffers.suggestedValue = strconv.FormatFloat(float64(convertedDefault), 'f', -1, 32)
+		tempBuffers.suggestedValue = utils.Float32ToString(convertedDefault)
 	}
 
 	conf.settings["temp_buffers"] = tempBuffers
@@ -439,6 +434,9 @@ func (conf *configuration) checkTempBuffers() error {
 // GENERALREC
 func (conf *configuration) checkMaxPreparedTransactions() error {
 	maxPreparedTransactions := conf.settings["max_prepared_transactions"]
+
+	// !!! consider passing this as an argument because there are currently two
+	// separate functions that ask for max_connections
 	maxConnections, err := getSpecificPGSetting("max_connections")
 	if err != nil {
 		return err
@@ -451,5 +449,70 @@ func (conf *configuration) checkMaxPreparedTransactions() error {
 
 	maxPreparedTransactions.requiresRestart = true
 	conf.settings["max_prepared_transactions"] = maxPreparedTransactions
+	return nil
+}
+
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+
+func (conf *configuration) checkWorkMem() error {
+	workMem := conf.settings["work_mem"]
+
+	// 1. Get amount of available memory and connections
+	availableMemory, err := utils.GetAvailableMemory()
+	if err != nil {
+		return err
+	}
+	maxConnections, err := getSpecificPGSetting("max_connections")
+	if err != nil {
+		return err
+	}
+
+	// 2. suggestion = availablememory / max_connections
+	maxConnectionsValue, err := utils.StringToUint64(maxConnections.value)
+	if err != nil {
+		return err
+	}
+	suggestion := utils.Uint64ToString(utils.RoundToPowerOf2(availableMemory / maxConnectionsValue))
+	suggestionAsWorkMemUnit, err := utils.ConvertBasedOnUnit(suggestion, "B", workMem.unit)
+	workMem.suggestedValue = utils.Float32ToString(suggestionAsWorkMemUnit)
+
+	// 3. Add details for decision
+	workMem.details = "Suggested value is based on currently available memory on the server divided by max_connections. If using complex queries that involve sorts or hash tables, consider using double this value. It can also be set higher if this server is a dedicated database server and there is no concern that other software will run out of memory."
+
+	conf.settings["work_mem"] = workMem
+	return nil
+}
+
+// GENERALREC
+func (conf *configuration) checkHashMemMultiplier() error {
+	hashMemMultiplier := conf.settings["hash_mem_multiplier"]
+	workMem := conf.settings["work_mem"]
+	workMemValueAsMB, err := utils.ConvertBasedOnUnit(workMem.value, workMem.unit, "MB")
+	if err != nil {
+		return err
+	}
+
+	// If more than 40MB
+	if workMemValueAsMB > 40 {
+		hashMemMultiplierAsFloat32, err := utils.StringToFloat32(hashMemMultiplier.value)
+		if err != nil {
+			return err
+		}
+		suggestion := (hashMemMultiplierAsFloat32 + workMemValueAsMB*0.01)
+		if suggestion > 8 {
+			suggestion = 8
+		}
+		hashMemMultiplier.details = "Generally default value works best. If your application uses hash-based operations and PostgreSQL often ends up spilling (creates workfiles on disk to compensate for lack of memory), consider increasing this further. Suggested value is based on how much working memory is currently set."
+		hashMemMultiplier.suggestedValue = utils.Float32ToString(suggestion)
+	} else if hashMemMultiplier.value != "2" {
+		fmt.Println("ieina")
+		hashMemMultiplier.details = "Generally default value works best. If your application uses hash-based operations and PostgreSQL often ends up spilling (creates workfiles on disk to compensate for lack of memory), consider increasing this after having increased work_mem above 40MB."
+		hashMemMultiplier.suggestedValue = "2"
+	}
+
+	conf.settings["hash_mem_multiplier"] = hashMemMultiplier
 	return nil
 }

@@ -107,11 +107,10 @@ func ConvertBasedOnUnit(value string, unitToConvertFrom string, unitToConvertTo 
 
 	switch unitToConvertTo {
 	case "MB":
-		// Jau ir taip converted
+		convertedValue, err = ConvertToMB(value, unitToConvertFrom)
 	case "kB":
 		convertedValue, err = ConvertToKB(value, unitToConvertFrom)
 	case "8kB":
-		// dar neimplementuota sita funkcija
 		convertedValue, err = ConvertTo8KB(value, unitToConvertFrom)
 	case "B":
 		convertedValue, err = ConvertToB(value, unitToConvertFrom)
@@ -122,7 +121,7 @@ func ConvertBasedOnUnit(value string, unitToConvertFrom string, unitToConvertTo 
 	return convertedValue, err
 }
 
-func RoundToPowerOf2(n int) int {
+func RoundToPowerOf2(n uint64) uint64 {
 	// This if statement does not round to power of 2
 	// However, due to nature of the app, if we do pass a value of 0, we want 0 returned
 	if n == 0 {
@@ -143,3 +142,52 @@ func RoundToPowerOf2(n int) int {
 	}
 	return 1 << power
 }
+
+//////////////////////////////////////
+// Below functions came as a necessity for easier conversion management
+
+func StringToFloat32(value string) (float32, error) {
+	result, err := strconv.ParseFloat(value, 32)
+	if err != nil {
+		return 0, err
+	}
+	return float32(result), nil
+}
+
+func StringToFloat64(value string) (float64, error) {
+	result, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
+}
+
+func StringToUint64(value string) (uint64, error) {
+	result, err := strconv.ParseUint(value, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
+}
+
+func StringToInt(value string) (int, error) {
+	result, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
+}
+
+func Float32ToString(value float32) string {
+	return strconv.FormatFloat(float64(value), 'f', -1, 32)
+}
+
+func Float64ToString(value float64) string {
+	return strconv.FormatFloat(value, 'f', -1, 64)
+}
+
+func Uint64ToString(value uint64) string {
+	return strconv.FormatUint(value, 10)
+}
+
+//////////////////////////////////////
