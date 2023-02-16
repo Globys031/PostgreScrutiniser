@@ -75,19 +75,14 @@ type configuration struct {
 func RunChecks(logger *utils.Logger) {
 	// user, pass := findPostgresCredentials();
 
-	// Find path to postgresql.conf
-	configFile, err := findConfigFile()
-	if err != nil {
-		logger.LogError(err.Error())
-	}
-	resourceSettings, err := getPGSettings()
-	if err != nil {
-		logger.LogError("Unable to get PostgreSQL settings: " + err.Error())
-	}
+	// Find path to postgresql.conf and get postgresql settings
+	// Error logging handled inside the functions
+	configFile, _ := findConfigFile(logger)
+	resourceSettings, _ := getPGSettings(logger)
 	conf := configuration{path: configFile, settings: resourceSettings}
 
 	///////////////////////////////
-	// Run checks. They handle error logging inside themselves
+	// Run checks. Error logging is handled inside these functions
 	conf.checkSharedBuffers(logger)
 	conf.checkHugePages(logger)
 	conf.checkHugePageSize(logger)
@@ -110,9 +105,10 @@ func findPostgresCredentials() (string, error) {
 }
 
 // Returns path to postgresql.conf if it exists.
-func findConfigFile() (string, error) {
+func findConfigFile(logger *utils.Logger) (string, error) {
 	output, err := exec.Command("psql", "-U", "postgres", "-c", "SHOW config_file").Output()
 	if err != nil {
+		logger.LogError("Failed finding postgresql.conf: " + err.Error())
 		return "", err
 	}
 
@@ -129,10 +125,13 @@ func findConfigFile() (string, error) {
 
 	// Check to confirm postgresql.conf file exists
 	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
-		return "", fmt.Errorf("postgresql.conf was found with `psql -U` but could not be opened: %v", err)
+		err = fmt.Errorf("postgresql.conf was found with `psql -U` but could not be opened: %v", err)
+		logger.LogError("Failed finding postgresql.conf: " + err.Error())
+		return "", err
 	}
 
 	if err := scanner.Err(); err != nil {
+		logger.LogError("Failed finding postgresql.conf: " + err.Error())
 		return "", err
 	}
 
@@ -141,7 +140,7 @@ func findConfigFile() (string, error) {
 
 // Stores data returned by `pg_settings` into a map
 // only for settings we're interested in.
-func getPGSettings() (map[string]resourceSetting, error) {
+func getPGSettings(logger *utils.Logger) (map[string]resourceSetting, error) {
 	// Settings we're interested in
 	resourceSettings := [34]string{"shared_buffers",
 		"huge_pages",
@@ -182,6 +181,7 @@ func getPGSettings() (map[string]resourceSetting, error) {
 	cmd := exec.Command("psql", "-U", "postgres", "-c", "select name,setting,vartype,unit,min_val,max_val,enumvals from pg_settings")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
+		logger.LogError("Failed fetching PostgreSql settings: " + err.Error())
 		return nil, err
 	}
 
