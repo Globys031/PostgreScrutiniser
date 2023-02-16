@@ -8,10 +8,6 @@ import (
 )
 
 // Convert B, kB, 8kB, to MB
-//
-// I am assuming that block_size is the default value
-// of 8192 bytes as defined by `block_size` and described here:
-// https://pgpedia.info/b/block_size.html#:~:text=The%20default%20value%20for%20block_size,(PostgreSQL%208.4%20and%20later).
 func ConvertToMB(value string, unit string) (float32, error) {
 	size, err := strconv.ParseFloat(value, 32)
 

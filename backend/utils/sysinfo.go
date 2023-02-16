@@ -15,8 +15,6 @@ func GetTotalMemory() (uint64, error) {
 		return 0, fmt.Errorf("Could not get total server memory")
 	}
 
-	// fmt.Println("info.Totalram: ", info.Totalram)
-
 	return info.Totalram, nil
 }
 
@@ -27,8 +25,6 @@ func GetAvailableMemory() (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("Could not get total available memory on the server")
 	}
-
-	// fmt.Println("info.Freeram: ", info.Freeram)
 
 	return info.Freeram, nil
 }

@@ -27,12 +27,18 @@ import (
 // also return documentation for every setting
 
 // TO DO:
-// Tam tikri grazins tik general recommendations (ties kurie virs funkcijos)
-// pamarkinti "GENERALREC"
+// Tam tikri grazins tik general recommendations (ties kurie virs funkcijos) pamarkinti "GENERALREC"
 // Pasvarstyt kaip front'e idet... Gal padaryt tris boxes kur
 // auksciausiai yra: "found %{n} appliable suggestions"
 // zemiau: General recommendations %{n}
 // zemiausiai: Passed without suggestions %{n}
+// Prie "General recommendations" galima pridet ui-info, kad "this group contains recommendations
+// that could not be fully decided based on your system parameters (for example, because PostgreScrutiniser does not know what queries your applications are typically running). Suggestions here should be applied at your own discretion based on details provided"
+
+// TO DO:
+// Add somewhere in the GUI a prompt that:
+// 1. This app assumes that block_size is the default value of 8192 bytes as defined by `block_size` and described here: https://pgpedia.info/b/block_size.html#:~:text=The%20default%20value%20for%20block_size,(PostgreSQL%208.4%20and%20later).
+// 2. This app assumes that all integer type settings have unit values specified
 
 type resourceSetting struct {
 	// TO DO: change minVal, maxVal, enumVals to something that's not string
@@ -86,10 +92,11 @@ func RunChecks() {
 	conf.checkMaxPreparedTransactions()
 	conf.checkWorkMem()
 	conf.checkHashMemMultiplier()
+	conf.checkMaintenanceWorkMem()
 
-	setting := "hash_mem_multiplier"
-	fmt.Printf("RunChecks() %s.value: %s\n", setting, conf.settings[setting].value)
-	fmt.Printf("RunChecks() %s.suggestedValue: %s\n", setting, conf.settings[setting].suggestedValue)
+	// setting := "maintenance_work_mem"
+	// fmt.Printf("RunChecks() %s.value: %s\n", setting, conf.settings[setting].value)
+	// fmt.Printf("RunChecks() %s.suggestedValue: %s\n", setting, conf.settings[setting].suggestedValue)
 
 }
 
@@ -452,11 +459,6 @@ func (conf *configuration) checkMaxPreparedTransactions() error {
 	return nil
 }
 
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-
 func (conf *configuration) checkWorkMem() error {
 	workMem := conf.settings["work_mem"]
 
@@ -516,3 +518,72 @@ func (conf *configuration) checkHashMemMultiplier() error {
 	conf.settings["hash_mem_multiplier"] = hashMemMultiplier
 	return nil
 }
+
+func (conf *configuration) checkMaintenanceWorkMem() error {
+	// 0. Fetch maintenance_work_mem and autovacumm_max_workers
+	maintenanceWorkMem := conf.settings["maintenance_work_mem"]
+	// tmpMaxWorkers only used to fetch autovacuum_max_workers
+	tmpMaxWorkers, err := getSpecificPGSetting("autovacuum_max_workers")
+	if err != nil {
+		return err
+	}
+	autovacuumMaxWorkers, err := utils.StringToFloat32(tmpMaxWorkers.value)
+	if err != nil {
+		return err
+	}
+
+	// 1. Get available memory on server
+	availableMemory, err := utils.GetAvailableMemory()
+	if err != nil {
+		return err
+	}
+	availableMemoryAsString := utils.Uint64ToString(availableMemory)
+	availableMemoryConverted, err := utils.ConvertBasedOnUnit(availableMemoryAsString, "B", maintenanceWorkMem.unit)
+	if err != nil {
+		return err
+	}
+
+	// 2. Divide available memory by 8 * autovacuum_max_workers and round to nearest power of 2
+	suggestion := availableMemoryConverted / 8 / autovacuumMaxWorkers
+	suggestionRounded := utils.RoundToPowerOf2(uint64(suggestion))
+
+	maintenanceWorkMem.details = fmt.Sprintf("This suggestion was made by dividing current available memory(%.2f%s) by 8 and multiplying by how many autovacuum_max_workers(%.0f) are set. Applications that heavily rely on maintenance operations, such as VACUUM, CREATE INDEX, and ALTER TABLE ADD FOREIGN KEY may want to increase this further by multiplying the suggested value by 2", availableMemoryConverted, maintenanceWorkMem.unit, autovacuumMaxWorkers)
+	if err != nil {
+		return err
+	}
+	maintenanceWorkMem.suggestedValue = utils.Uint64ToString(suggestionRounded)
+
+	// 3. If suggestion is below default value and current value is not equal to default,
+	// suggest default value instead.
+
+	suggestionAsMB, err := utils.ConvertBasedOnUnit(utils.Uint64ToString(suggestionRounded), maintenanceWorkMem.unit, "MB")
+	if err != nil {
+		return err
+	}
+
+	if suggestionAsMB < 64 {
+		maintenanceWorkMemAsMB, err := utils.ConvertBasedOnUnit(maintenanceWorkMem.value, maintenanceWorkMem.unit, "MB")
+		if err != nil {
+			return err
+		}
+		if maintenanceWorkMemAsMB != 64 {
+			maintenanceWorkMem.details = "Currently there is not enough available memory on the server to go above default maintenance_work_mem value"
+			defaultAsUnit, err := utils.ConvertBasedOnUnit("64", "MB", maintenanceWorkMem.unit)
+			if err != nil {
+				return err
+			}
+			maintenanceWorkMem.suggestedValue = utils.Float32ToString(defaultAsUnit)
+		} else { // if suggestion was below default and current value is already set to default
+			maintenanceWorkMem.details = ""
+			maintenanceWorkMem.suggestedValue = ""
+		}
+	}
+
+	conf.settings["maintenance_work_mem"] = maintenanceWorkMem
+	return nil
+}
+
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
