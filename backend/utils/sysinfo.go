@@ -12,7 +12,7 @@ func GetTotalMemory() (uint64, error) {
 	var info syscall.Sysinfo_t
 	err := syscall.Sysinfo(&info)
 	if err != nil {
-		return 0, fmt.Errorf("Could not get total server memory")
+		return 0, fmt.Errorf("Could not get total server memory: %v", err)
 	}
 
 	return info.Totalram, nil
@@ -23,7 +23,7 @@ func GetAvailableMemory() (uint64, error) {
 	var info syscall.Sysinfo_t
 	err := syscall.Sysinfo(&info)
 	if err != nil {
-		return 0, fmt.Errorf("Could not get total available memory on the server")
+		return 0, fmt.Errorf("Could not get total available memory on the server: %v", err)
 	}
 
 	return info.Freeram, nil

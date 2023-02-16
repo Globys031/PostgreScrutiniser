@@ -12,7 +12,7 @@ func ConvertToMB(value string, unit string) (float32, error) {
 	size, err := strconv.ParseFloat(value, 32)
 
 	if err != nil {
-		return 0, fmt.Errorf("Could not convert value: %s, to MB", value)
+		return 0, fmt.Errorf("could not convert value: %s for unit %s, to MB", value, unit)
 	}
 
 	switch unit {
@@ -35,7 +35,7 @@ func ConvertToKB(value string, unit string) (float32, error) {
 	size, err := strconv.ParseFloat(value, 32)
 
 	if err != nil {
-		return 0, fmt.Errorf("Could not convert value: %s, to KB", value)
+		return 0, fmt.Errorf("could not convert value: %s for unit %s, to KB", value, unit)
 	}
 
 	switch unit {
@@ -57,7 +57,7 @@ func ConvertToB(value string, unit string) (float32, error) {
 	size, err := strconv.ParseFloat(value, 32)
 
 	if err != nil {
-		return 0, fmt.Errorf("Could not convert value: %s, to KB", value)
+		return 0, fmt.Errorf("could not convert value: %s for unit %s, to B", value, unit)
 	}
 
 	switch unit {

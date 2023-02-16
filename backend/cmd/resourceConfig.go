@@ -4,7 +4,9 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -70,29 +72,30 @@ type configuration struct {
 	// settings [34]string
 }
 
-func RunChecks() {
+func RunChecks(logger *utils.Logger) {
 	// user, pass := findPostgresCredentials();
 
 	// Find path to postgresql.conf
 	configFile, err := findConfigFile()
 	if err != nil {
-		// TO DO: use https://pkg.go.dev/log instead
-		fmt.Printf("Unable to find postgresql.conf:\n%v\n\n", err)
+		logger.LogError(err.Error())
 	}
-
 	resourceSettings, err := getPGSettings()
+	if err != nil {
+		logger.LogError("Unable to get PostgreSQL settings: " + err.Error())
+	}
 	conf := configuration{path: configFile, settings: resourceSettings}
 
 	///////////////////////////////
-	// Run checks
-	conf.checkSharedBuffers()
-	conf.checkHugePages()
-	conf.checkHugePageSize()
-	conf.checkTempBuffers()
-	conf.checkMaxPreparedTransactions()
-	conf.checkWorkMem()
-	conf.checkHashMemMultiplier()
-	conf.checkMaintenanceWorkMem()
+	// Run checks. They handle error logging inside themselves
+	conf.checkSharedBuffers(logger)
+	conf.checkHugePages(logger)
+	conf.checkHugePageSize(logger)
+	conf.checkTempBuffers(logger)
+	conf.checkMaxPreparedTransactions(logger)
+	conf.checkWorkMem(logger)
+	conf.checkHashMemMultiplier(logger)
+	conf.checkMaintenanceWorkMem(logger)
 
 	// setting := "maintenance_work_mem"
 	// fmt.Printf("RunChecks() %s.value: %s\n", setting, conf.settings[setting].value)
@@ -113,20 +116,27 @@ func findConfigFile() (string, error) {
 		return "", err
 	}
 
+	var filePath string
 	scanner := bufio.NewScanner(bytes.NewReader(output))
 	// Return line that has postgresql.conf in it
 	for scanner.Scan() {
 		line := scanner.Text()
 		if match, _ := regexp.MatchString("postgresql.conf", line); match {
-			return strings.TrimSpace(line), nil
+			filePath = strings.TrimSpace(line)
+			break
 		}
+	}
+
+	// Check to confirm postgresql.conf file exists
+	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("postgresql.conf was found with `psql -U` but could not be opened: %v", err)
 	}
 
 	if err := scanner.Err(); err != nil {
 		return "", err
 	}
 
-	return "", fmt.Errorf("something unexpected happened")
+	return filePath, nil
 }
 
 // Stores data returned by `pg_settings` into a map
@@ -291,7 +301,7 @@ func setEnumTypeSuggestedValue(setting *resourceSetting, valueToSet string) erro
 
 // Checks what unit is used for shared_buffers, applies necessary conversions
 // and sets final suggestion as a shared_buffers unit to closest value that's power of 2
-func (conf *configuration) checkSharedBuffers() error {
+func (conf *configuration) checkSharedBuffers(logger *utils.Logger) error {
 	var suggestion float32
 	var lowestRecommendedValue float32 = 128 // Cannot suggest value that is lower than 128MB
 	var GigabyteInBytes uint64 = 1073741824  // 1GB
@@ -300,6 +310,7 @@ func (conf *configuration) checkSharedBuffers() error {
 	// 1. Get total server memory
 	totalMemory, err := utils.GetTotalMemory()
 	if err != nil {
+		logger.LogError("Failed shared_buffers check because could not get total server memory: " + err.Error())
 		return err
 	}
 
@@ -307,6 +318,7 @@ func (conf *configuration) checkSharedBuffers() error {
 	totalMemoryAsString := utils.Uint64ToString(totalMemory)
 	totalMemoryConverted, err := utils.ConvertBasedOnUnit(totalMemoryAsString, "B", sharedBuffers.unit)
 	if err != nil {
+		logger.LogError("Failed shared_buffers check: " + err.Error())
 		return err
 	}
 
@@ -319,11 +331,13 @@ func (conf *configuration) checkSharedBuffers() error {
 	} else { // Else suggest 30% of what memory is currently available on the server
 		availableMemory, err := utils.GetAvailableMemory()
 		if err != nil {
+			logger.LogError("Failed shared_buffers check because could not get total available memory: " + err.Error())
 			return err
 		}
 		availableMemoryAsString := utils.Uint64ToString(availableMemory)
 		availableMemoryConverted, err := utils.ConvertBasedOnUnit(availableMemoryAsString, "B", sharedBuffers.unit)
 		if err != nil {
+			logger.LogError("Failed shared_buffers check: " + err.Error())
 			return err
 		}
 		suggestion = availableMemoryConverted * 0.30
@@ -333,6 +347,7 @@ func (conf *configuration) checkSharedBuffers() error {
 		lowestRecommendedValueAsString := utils.Float32ToString(lowestRecommendedValue)
 		lowestRecommendedValue, err = utils.ConvertBasedOnUnit(lowestRecommendedValueAsString, "MB", sharedBuffers.unit)
 		if err != nil {
+			logger.LogError("Failed shared_buffers check: " + err.Error())
 			return err
 		}
 		if suggestion < lowestRecommendedValue {
@@ -351,12 +366,13 @@ func (conf *configuration) checkSharedBuffers() error {
 	return nil
 }
 
-func (conf *configuration) checkHugePages() error {
+func (conf *configuration) checkHugePages(logger *utils.Logger) error {
 	hugePages := conf.settings["huge_pages"]
 
 	// Get nr_hugepages value
 	kernelPagesString, err := sysctl.Get("vm.nr_hugepages")
 	if err != nil {
+		logger.LogError("Failed huge_pages check: " + err.Error())
 		return err
 	}
 	kernelNrHugePages, err := utils.StringToInt(kernelPagesString)
@@ -384,12 +400,13 @@ func (conf *configuration) checkHugePages() error {
 	return nil
 }
 
-func (conf *configuration) checkHugePageSize() error {
+func (conf *configuration) checkHugePageSize(logger *utils.Logger) error {
 	hugePageSize := conf.settings["huge_page_size"]
 
 	// Get nr_hugepages value
 	kernelPagesString, err := sysctl.Get("vm.nr_hugepages")
 	if err != nil {
+		logger.LogError("Failed huge_page_size check: " + err.Error())
 		return err
 	}
 	kernelNrHugePages, err := strconv.Atoi(kernelPagesString)
@@ -410,16 +427,18 @@ func (conf *configuration) checkHugePageSize() error {
 }
 
 // GENERALREC
-func (conf *configuration) checkTempBuffers() error {
+func (conf *configuration) checkTempBuffers(logger *utils.Logger) error {
 	tempBuffers := conf.settings["temp_buffers"]
 
 	currentValue, err := utils.StringToUint64(tempBuffers.value)
 	if err != nil {
+		logger.LogError("Failed temp_buffers check: " + err.Error())
 		return err
 	}
 	currentValueAsString := utils.Uint64ToString(currentValue)
 	currentValueConverted, err := utils.ConvertBasedOnUnit(currentValueAsString, "8kB", tempBuffers.unit)
 	if err != nil {
+		logger.LogError("Failed temp_buffers check: " + err.Error())
 		return err
 	}
 	if currentValueConverted > 1024 { // 1024 8kB is equivalent to 8MB
@@ -429,6 +448,7 @@ func (conf *configuration) checkTempBuffers() error {
 
 		convertedDefault, err := utils.ConvertBasedOnUnit("1024", "8kB", tempBuffers.unit)
 		if err != nil {
+			logger.LogError("Failed temp_buffers check: " + err.Error())
 			return err
 		}
 		tempBuffers.suggestedValue = utils.Float32ToString(convertedDefault)
@@ -439,13 +459,14 @@ func (conf *configuration) checkTempBuffers() error {
 }
 
 // GENERALREC
-func (conf *configuration) checkMaxPreparedTransactions() error {
+func (conf *configuration) checkMaxPreparedTransactions(logger *utils.Logger) error {
 	maxPreparedTransactions := conf.settings["max_prepared_transactions"]
 
 	// !!! consider passing this as an argument because there are currently two
 	// separate functions that ask for max_connections
 	maxConnections, err := getSpecificPGSetting("max_connections")
 	if err != nil {
+		logger.LogError("Failed max_prepared_transactions check: " + err.Error())
 		return err
 	}
 
@@ -459,22 +480,25 @@ func (conf *configuration) checkMaxPreparedTransactions() error {
 	return nil
 }
 
-func (conf *configuration) checkWorkMem() error {
+func (conf *configuration) checkWorkMem(logger *utils.Logger) error {
 	workMem := conf.settings["work_mem"]
 
 	// 1. Get amount of available memory and connections
 	availableMemory, err := utils.GetAvailableMemory()
 	if err != nil {
+		logger.LogError("Failed work_mem check: " + err.Error())
 		return err
 	}
 	maxConnections, err := getSpecificPGSetting("max_connections")
 	if err != nil {
+		logger.LogError("Failed work_mem check: " + err.Error())
 		return err
 	}
 
 	// 2. suggestion = availablememory / max_connections
 	maxConnectionsValue, err := utils.StringToUint64(maxConnections.value)
 	if err != nil {
+		logger.LogError("Failed work_mem check: " + err.Error())
 		return err
 	}
 	suggestion := utils.Uint64ToString(utils.RoundToPowerOf2(availableMemory / maxConnectionsValue))
@@ -489,11 +513,12 @@ func (conf *configuration) checkWorkMem() error {
 }
 
 // GENERALREC
-func (conf *configuration) checkHashMemMultiplier() error {
+func (conf *configuration) checkHashMemMultiplier(logger *utils.Logger) error {
 	hashMemMultiplier := conf.settings["hash_mem_multiplier"]
 	workMem := conf.settings["work_mem"]
 	workMemValueAsMB, err := utils.ConvertBasedOnUnit(workMem.value, workMem.unit, "MB")
 	if err != nil {
+		logger.LogError("Failed hash_mem_multiplier check: " + err.Error())
 		return err
 	}
 
@@ -501,6 +526,7 @@ func (conf *configuration) checkHashMemMultiplier() error {
 	if workMemValueAsMB > 40 {
 		hashMemMultiplierAsFloat32, err := utils.StringToFloat32(hashMemMultiplier.value)
 		if err != nil {
+			logger.LogError("Failed hash_mem_multiplier check: " + err.Error())
 			return err
 		}
 		suggestion := (hashMemMultiplierAsFloat32 + workMemValueAsMB*0.01)
@@ -519,27 +545,31 @@ func (conf *configuration) checkHashMemMultiplier() error {
 	return nil
 }
 
-func (conf *configuration) checkMaintenanceWorkMem() error {
+func (conf *configuration) checkMaintenanceWorkMem(logger *utils.Logger) error {
 	// 0. Fetch maintenance_work_mem and autovacumm_max_workers
 	maintenanceWorkMem := conf.settings["maintenance_work_mem"]
 	// tmpMaxWorkers only used to fetch autovacuum_max_workers
 	tmpMaxWorkers, err := getSpecificPGSetting("autovacuum_max_workers")
 	if err != nil {
+		logger.LogError("Failed maintenance_work_mem check: " + err.Error())
 		return err
 	}
 	autovacuumMaxWorkers, err := utils.StringToFloat32(tmpMaxWorkers.value)
 	if err != nil {
+		logger.LogError("Failed maintenance_work_mem check: " + err.Error())
 		return err
 	}
 
 	// 1. Get available memory on server
 	availableMemory, err := utils.GetAvailableMemory()
 	if err != nil {
+		logger.LogError("Failed maintenance_work_mem check: " + err.Error())
 		return err
 	}
 	availableMemoryAsString := utils.Uint64ToString(availableMemory)
 	availableMemoryConverted, err := utils.ConvertBasedOnUnit(availableMemoryAsString, "B", maintenanceWorkMem.unit)
 	if err != nil {
+		logger.LogError("Failed maintenance_work_mem check: " + err.Error())
 		return err
 	}
 
@@ -549,6 +579,7 @@ func (conf *configuration) checkMaintenanceWorkMem() error {
 
 	maintenanceWorkMem.details = fmt.Sprintf("This suggestion was made by dividing current available memory(%.2f%s) by 8 and multiplying by how many autovacuum_max_workers(%.0f) are set. Applications that heavily rely on maintenance operations, such as VACUUM, CREATE INDEX, and ALTER TABLE ADD FOREIGN KEY may want to increase this further by multiplying the suggested value by 2", availableMemoryConverted, maintenanceWorkMem.unit, autovacuumMaxWorkers)
 	if err != nil {
+		logger.LogError("Failed maintenance_work_mem check: " + err.Error())
 		return err
 	}
 	maintenanceWorkMem.suggestedValue = utils.Uint64ToString(suggestionRounded)
@@ -558,18 +589,21 @@ func (conf *configuration) checkMaintenanceWorkMem() error {
 
 	suggestionAsMB, err := utils.ConvertBasedOnUnit(utils.Uint64ToString(suggestionRounded), maintenanceWorkMem.unit, "MB")
 	if err != nil {
+		logger.LogError("Failed maintenance_work_mem check: " + err.Error())
 		return err
 	}
 
 	if suggestionAsMB < 64 {
 		maintenanceWorkMemAsMB, err := utils.ConvertBasedOnUnit(maintenanceWorkMem.value, maintenanceWorkMem.unit, "MB")
 		if err != nil {
+			logger.LogError("Failed maintenance_work_mem check: " + err.Error())
 			return err
 		}
 		if maintenanceWorkMemAsMB != 64 {
 			maintenanceWorkMem.details = "Currently there is not enough available memory on the server to go above default maintenance_work_mem value"
 			defaultAsUnit, err := utils.ConvertBasedOnUnit("64", "MB", maintenanceWorkMem.unit)
 			if err != nil {
+				logger.LogError("Failed maintenance_work_mem check: " + err.Error())
 				return err
 			}
 			maintenanceWorkMem.suggestedValue = utils.Float32ToString(defaultAsUnit)

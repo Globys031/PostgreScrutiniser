@@ -4,6 +4,7 @@ import (
 	"flag"
 
 	"github.com/Globys031/PostgreScrutiniser/backend/cmd"
+	"github.com/Globys031/PostgreScrutiniser/backend/utils"
 )
 
 var (
@@ -15,7 +16,13 @@ var (
 func main() {
 	flag.Parse() // parses the above flag variables
 
-	cmd.RunChecks()
+	////////////////////////
+	// Initialise logging
+	logger := utils.InitLogging()
+
+	////////////////////////
+	// Run the actual application
+	cmd.RunChecks(logger)
 
 	//////////////////////////
 	// Loads configs
