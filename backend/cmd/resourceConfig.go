@@ -91,10 +91,12 @@ func RunChecks(logger *utils.Logger) {
 	conf.checkWorkMem(logger)
 	conf.checkHashMemMultiplier(logger)
 	conf.checkMaintenanceWorkMem(logger)
+	conf.checkAutovacuumWorkMem(logger)
+	conf.checklogicalDecodingWorkMem(logger)
 
-	// setting := "maintenance_work_mem"
-	// fmt.Printf("RunChecks() %s.value: %s\n", setting, conf.settings[setting].value)
-	// fmt.Printf("RunChecks() %s.suggestedValue: %s\n", setting, conf.settings[setting].suggestedValue)
+	setting := "logical_decoding_work_mem"
+	fmt.Printf("RunChecks() %s.value: %s\n", setting, conf.settings[setting].value)
+	fmt.Printf("RunChecks() %s.suggestedValue: %s\n", setting, conf.settings[setting].suggestedValue)
 
 }
 
@@ -546,42 +548,18 @@ func (conf *configuration) checkHashMemMultiplier(logger *utils.Logger) error {
 }
 
 func (conf *configuration) checkMaintenanceWorkMem(logger *utils.Logger) error {
-	// 0. Fetch maintenance_work_mem and autovacumm_max_workers
+	// 1. Get maintenance_work_mem, autovacumm_max_workers and available memory on server
 	maintenanceWorkMem := conf.settings["maintenance_work_mem"]
-	// tmpMaxWorkers only used to fetch autovacuum_max_workers
-	tmpMaxWorkers, err := getSpecificPGSetting("autovacuum_max_workers")
+	autovacuumMaxWorkers, availableMem, err := getWorkMemRelatedValues(logger, &maintenanceWorkMem)
 	if err != nil {
-		logger.LogError("Failed maintenance_work_mem check: " + err.Error())
-		return err
-	}
-	autovacuumMaxWorkers, err := utils.StringToFloat32(tmpMaxWorkers.value)
-	if err != nil {
-		logger.LogError("Failed maintenance_work_mem check: " + err.Error())
-		return err
-	}
-
-	// 1. Get available memory on server
-	availableMemory, err := utils.GetAvailableMemory()
-	if err != nil {
-		logger.LogError("Failed maintenance_work_mem check: " + err.Error())
-		return err
-	}
-	availableMemoryAsString := utils.Uint64ToString(availableMemory)
-	availableMemoryConverted, err := utils.ConvertBasedOnUnit(availableMemoryAsString, "B", maintenanceWorkMem.unit)
-	if err != nil {
-		logger.LogError("Failed maintenance_work_mem check: " + err.Error())
-		return err
+		logger.LogError("failed maintenance_work_mem check: " + err.Error())
 	}
 
 	// 2. Divide available memory by 8 * autovacuum_max_workers and round to nearest power of 2
-	suggestion := availableMemoryConverted / 8 / autovacuumMaxWorkers
+	suggestion := availableMem / 8 / autovacuumMaxWorkers
 	suggestionRounded := utils.RoundToPowerOf2(uint64(suggestion))
 
-	maintenanceWorkMem.details = fmt.Sprintf("This suggestion was made by dividing current available memory(%.2f%s) by 8 and multiplying by how many autovacuum_max_workers(%.0f) are set. Applications that heavily rely on maintenance operations, such as VACUUM, CREATE INDEX, and ALTER TABLE ADD FOREIGN KEY may want to increase this further by multiplying the suggested value by 2", availableMemoryConverted, maintenanceWorkMem.unit, autovacuumMaxWorkers)
-	if err != nil {
-		logger.LogError("Failed maintenance_work_mem check: " + err.Error())
-		return err
-	}
+	maintenanceWorkMem.details = fmt.Sprintf("This suggestion was made by dividing current available memory(%.2f%s) by 8 and by how many autovacuum_max_workers(%.0f) are set. Applications that heavily rely on maintenance operations, such as VACUUM, CREATE INDEX, and ALTER TABLE ADD FOREIGN KEY may want to increase this further by multiplying the suggested value by 2", availableMem, maintenanceWorkMem.unit, autovacuumMaxWorkers)
 	maintenanceWorkMem.suggestedValue = utils.Uint64ToString(suggestionRounded)
 
 	// 3. If suggestion is below default value and current value is not equal to default,
@@ -621,3 +599,112 @@ func (conf *configuration) checkMaintenanceWorkMem(logger *utils.Logger) error {
 ///////////////////////////////////////////////////
 ///////////////////////////////////////////////////
 ///////////////////////////////////////////////////
+
+func (conf *configuration) checkAutovacuumWorkMem(logger *utils.Logger) error {
+	// 1. Get autovacuum_work_mem, autovacumm_max_workers and available memory on server
+	autovacuumWorkMem := conf.settings["autovacuum_work_mem"]
+	autovacuumMaxWorkers, availableMem, err := getWorkMemRelatedValues(logger, &autovacuumWorkMem)
+	if err != nil {
+		logger.LogError("Failed autovacuum_work_mem check: " + err.Error())
+		return err
+	}
+
+	// 2. Divide available memory by 8 * autovacuum_max_workers and round to nearest power of 2
+	suggestion := availableMem / 4 / autovacuumMaxWorkers
+	suggestionRounded := utils.RoundToPowerOf2(uint64(suggestion))
+
+	autovacuumWorkMem.details = fmt.Sprintf("This suggestion was made by dividing current available memory(%.2f%s) by 4 and by how many autovacuum_max_workers(%.0f) are set", availableMem, autovacuumWorkMem.unit, autovacuumMaxWorkers)
+	autovacuumWorkMem.suggestedValue = utils.Uint64ToString(suggestionRounded)
+
+	// 3. If suggestion is below default of maintenance_work_mem value
+	// and current value is not already -1, suggest -1 instead.
+
+	suggestionAsMB, err := utils.ConvertBasedOnUnit(utils.Uint64ToString(suggestionRounded), autovacuumWorkMem.unit, "MB")
+	if err != nil {
+		logger.LogError("Failed autovacuum_work_mem check: " + err.Error())
+		return err
+	}
+
+	if suggestionAsMB < 64 && autovacuumWorkMem.value != "-1" {
+		defaultAsUnit, err := utils.ConvertBasedOnUnit("64", "MB", autovacuumWorkMem.unit)
+		if err != nil {
+			logger.LogError("Failed autovacuum_work_mem check: " + err.Error())
+			return err
+		}
+		autovacuumWorkMem.details = "Currently there is not enough available memory on the server to go above default autovacuum_work_mem value. Suggesting setting to -1 to rely on maintenance_work_mem instead"
+		autovacuumWorkMem.suggestedValue = utils.Float32ToString(defaultAsUnit)
+	} else if suggestionAsMB < 64 { // if already set to -1, don't suggest anything
+		autovacuumWorkMem.details = ""
+		autovacuumWorkMem.suggestedValue = ""
+	}
+
+	conf.settings["autovacuum_work_mem"] = autovacuumWorkMem
+	return nil
+}
+
+// Function for getting `autovacuum_max_workers` and available memory on server
+// to later be used in checks for `maintenance_work_mem` and `autovacuum_work_mem`
+func getWorkMemRelatedValues(logger *utils.Logger, setting *resourceSetting) (float32, float32, error) {
+	// 1. Get autovacuum_max_workers
+	tmpMaxWorkers, err := getSpecificPGSetting("autovacuum_max_workers")
+	if err != nil {
+		logger.LogError("failed getting autovacuum_max_workers: " + err.Error())
+		return 0, 0, err
+	}
+	autovacuumMaxWorkers, err := utils.StringToFloat32(tmpMaxWorkers.value)
+	if err != nil {
+		logger.LogError("failed getting autovacuum_max_workers: " + err.Error())
+		return 0, 0, err
+	}
+
+	// 1. Get available memory on server
+	availableMemory, err := utils.GetAvailableMemory()
+	if err != nil {
+		logger.LogError("failed getting available memory on server check: " + err.Error())
+		return 0, 0, err
+	}
+	availableMemoryAsString := utils.Uint64ToString(availableMemory)
+	availableMemoryConverted, err := utils.ConvertBasedOnUnit(availableMemoryAsString, "B", setting.unit)
+	if err != nil {
+		logger.LogError("failed getting available memory on server check: " + err.Error())
+		return 0, 0, err
+	}
+
+	return autovacuumMaxWorkers, availableMemoryConverted, nil
+}
+
+func (conf *configuration) checklogicalDecodingWorkMem(logger *utils.Logger) error {
+	logicalDecodingWorkMem := conf.settings["logical_decoding_work_mem"]
+
+	// 1. Get available memory on server
+	availableMemory, err := utils.GetAvailableMemory()
+	if err != nil {
+		logger.LogError("failed logical_decoding_work_mem check: " + err.Error())
+		return err
+	}
+	availableMemoryAsString := utils.Uint64ToString(availableMemory)
+	availableMemoryConverted, err := utils.ConvertBasedOnUnit(availableMemoryAsString, "B", logicalDecodingWorkMem.unit)
+	if err != nil {
+		logger.LogError("failed logical_decoding_work_mem check: " + err.Error())
+		return err
+	}
+
+	// 2. make suggestion by dividing available memory by 8 and rounding to nearest power of 2
+	suggestion := availableMemoryConverted / 8
+	suggestionRounded := utils.RoundToPowerOf2(uint64(suggestion))
+
+	// 3. If suggested value is less than 64MB, make no suggestion
+	suggestionAsMB, err := utils.ConvertBasedOnUnit(utils.Uint64ToString(suggestionRounded), logicalDecodingWorkMem.unit, "MB")
+	if err != nil {
+		logger.LogError("failed logicalDecodingWorkMem check: " + err.Error())
+		return err
+	}
+
+	if !(suggestionAsMB < 64) {
+		logicalDecodingWorkMem.details = fmt.Sprintf("This suggestion was made by dividing current available memory(%.2f) by 8", availableMemoryConverted)
+		logicalDecodingWorkMem.suggestedValue = utils.Uint64ToString(suggestionRounded)
+	}
+
+	conf.settings["logical_decoding_work_mem"] = logicalDecodingWorkMem
+	return nil
+}

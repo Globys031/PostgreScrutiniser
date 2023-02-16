@@ -7,6 +7,26 @@ import (
 	"strconv"
 )
 
+func ConvertBasedOnUnit(value string, unitToConvertFrom string, unitToConvertTo string) (float32, error) {
+	var convertedValue float32
+	var err error
+
+	switch unitToConvertTo {
+	case "MB":
+		convertedValue, err = ConvertToMB(value, unitToConvertFrom)
+	case "kB":
+		convertedValue, err = ConvertToKB(value, unitToConvertFrom)
+	case "8kB":
+		convertedValue, err = ConvertTo8KB(value, unitToConvertFrom)
+	case "B":
+		convertedValue, err = ConvertToB(value, unitToConvertFrom)
+	default:
+		return 0, fmt.Errorf("unsupported unit: %s", unitToConvertFrom)
+	}
+
+	return convertedValue, err
+}
+
 // Convert B, kB, 8kB, to MB
 func ConvertToMB(value string, unit string) (float32, error) {
 	size, err := strconv.ParseFloat(value, 32)
@@ -95,26 +115,6 @@ func ConvertTo8KB(value string, unit string) (float32, error) {
 	}
 
 	return float32(size), nil
-}
-
-func ConvertBasedOnUnit(value string, unitToConvertFrom string, unitToConvertTo string) (float32, error) {
-	var convertedValue float32
-	var err error
-
-	switch unitToConvertTo {
-	case "MB":
-		convertedValue, err = ConvertToMB(value, unitToConvertFrom)
-	case "kB":
-		convertedValue, err = ConvertToKB(value, unitToConvertFrom)
-	case "8kB":
-		convertedValue, err = ConvertTo8KB(value, unitToConvertFrom)
-	case "B":
-		convertedValue, err = ConvertToB(value, unitToConvertFrom)
-	default:
-		return 0, fmt.Errorf("unsupported unit: %s", unitToConvertFrom)
-	}
-
-	return convertedValue, err
 }
 
 func RoundToPowerOf2(n uint64) uint64 {
