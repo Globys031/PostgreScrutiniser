@@ -37,7 +37,6 @@ func GetStackSize() (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("Could not get stack size: %v", err)
 	}
-
 	// Returns stack size in bytes
 	return rlimit.Cur, nil
 }

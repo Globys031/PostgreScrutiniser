@@ -17,30 +17,48 @@ import (
 	"github.com/Globys031/PostgreScrutiniser/backend/utils"
 )
 
-// TO DO:
-// Currently I've modified /var/lib/pgsql/15/data/pg_hba.conf
-// to allow all connections without any password on localhost.
-// This is bad, should reenable peer authentification later and have code
-// take that into account:
-//
-// [root@localhost backend]# grep trust /var/lib/pgsql/15/data/pg_hba.conf
+/*
+Does not do checks for:
+- max_files_per_process (only concerns BSD systems)
+
+Still need checks for:
+- temp_file_limit
+- everything under "Cost-based Vacuum Delay" section (involves parallelisation)
+- everything under "Background Writer" section
+- everything under "Asynchronous Behavior" section
+
+These aren't essential settings. Will come back later to add checks for these
+if there's enough time
+*/
+
+/*
+TO DO:
+Currently I've modified /var/lib/pgsql/15/data/pg_hba.conf
+to allow all connections without any password on localhost.
+This is bad, should reenable peer authentification later and have code
+take that into account:
+
+[root@localhost backend]# grep trust /var/lib/pgsql/15/data/pg_hba.conf
+*/
 
 // TO DO:
 // also return documentation for every setting
 
-// TO DO:
-// Tam tikri grazins tik general recommendations (ties kurie virs funkcijos) pamarkinti "GENERALREC"
-// Pasvarstyt kaip front'e idet... Gal padaryt tris boxes kur
-// auksciausiai yra: "found %{n} appliable suggestions"
-// zemiau: General recommendations %{n}
-// zemiausiai: Passed without suggestions %{n}
-// Prie "General recommendations" galima pridet ui-info, kad "this group contains recommendations
-// that could not be fully decided based on your system parameters (for example, because PostgreScrutiniser does not know what queries your applications are typically running). Suggestions here should be applied at your own discretion based on details provided"
+/* TO DO:
+Tam tikri grazins tik general recommendations (ties kurie virs funkcijos) pamarkinti "GENERALREC"
+Pasvarstyt kaip front'e idet... Gal padaryt tris boxes kur
+auksciausiai yra: "found %{n} appliable suggestions"
+zemiau: General recommendations %{n}
+zemiausiai: Passed without suggestions %{n}
+Prie "General recommendations" galima pridet ui-info, kad "this group contains recommendations
+that could not be fully decided based on your system parameters (for example, because PostgreScrutiniser does not know what queries your applications are typically running). Suggestions here should be applied at your own discretion based on details provided"
+*/
 
-// TO DO:
-// Add somewhere in the GUI a prompt that:
-// 1. This app assumes that block_size is the default value of 8192 bytes as defined by `block_size` and described here: https://pgpedia.info/b/block_size.html#:~:text=The%20default%20value%20for%20block_size,(PostgreSQL%208.4%20and%20later).
-// 2. This app assumes that all integer type settings have unit values specified
+/* TO DO:
+Add somewhere in the GUI a prompt that:
+1. This app assumes that block_size is the default value of 8192 bytes as defined by `block_size` and described here: https://pgpedia.info/b/block_size.html#:~:text=The%20default%20value%20for%20block_size,(PostgreSQL%208.4%20and%20later).
+2. This app assumes that all integer type settings have unit values specified
+*/
 
 type resourceSetting struct {
 	// TO DO: change minVal, maxVal, enumVals to something that's not string
@@ -151,7 +169,7 @@ func findConfigFile(logger *utils.Logger) (string, error) {
 // only for settings we're interested in.
 func getPGSettings(logger *utils.Logger) (map[string]resourceSetting, error) {
 	// Settings we're interested in
-	resourceSettings := [34]string{"shared_buffers",
+	resourceSettings := [33]string{"shared_buffers",
 		"huge_pages",
 		"huge_page_size",
 		"temp_buffers",
@@ -166,7 +184,6 @@ func getPGSettings(logger *utils.Logger) (map[string]resourceSetting, error) {
 		"dynamic_shared_memory_type",
 		"min_dynamic_shared_memory",
 		"temp_file_limit",
-		"max_files_per_process",
 		"vacuum_cost_delay",
 		"vacuum_cost_page_hit",
 		"vacuum_cost_page_miss",
@@ -675,11 +692,6 @@ func getWorkMemRelatedValues(logger *utils.Logger, setting *resourceSetting) (fl
 	return autovacuumMaxWorkers, availableMemoryConverted, nil
 }
 
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-
 func (conf *configuration) checklogicalDecodingWorkMem(logger *utils.Logger) error {
 	logicalDecodingWorkMem := conf.settings["logical_decoding_work_mem"]
 
@@ -809,6 +821,14 @@ func suggestDefault(setting *resourceSetting, details string) error {
 
 	return nil
 }
+
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+
+// TO DO: consider leaving as is. The most important parameters already have suggestions
+// Come back once frontend side for these is setup, else might run out of time.
 
 // GENERALREC
 func (conf *configuration) checkMinDynamicSharedMemory(logger *utils.Logger) error {
