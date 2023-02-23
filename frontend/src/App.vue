@@ -1,31 +1,53 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from "vue-router";
+import Sidebar from "./components/Sidebar.vue";
 import HelloWorld from "./components/HelloWorld.vue";
 </script>
 
 <template>
-  <header>
-    <img
-      alt="Vue logo"
-      class="logo"
-      src="@/assets/logo.svg"
-      width="125"
-      height="125"
-    />
+  <Sidebar />
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
+  <div class="main-body">
+    <div>test</div>
+    <header>
+      <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
 
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
-    </div>
-  </header>
+      <div class="wrapper">
+        <HelloWorld msg="You did it!" />
 
-  <RouterView />
+        <nav>
+          <RouterLink to="/">Home</RouterLink>
+          <RouterLink to="/about">About</RouterLink>
+        </nav>
+      </div>
+    </header>
+
+    <RouterView />
+  </div>
 </template>
 
+<style scoped>
+/* CSS necessary for sidebar to function START */
+.main-body {
+  position: relative;
+  background: #E4E9F7;
+  min-height: 100vh;
+  top: 0;
+  left: 78px;
+  width: calc(100% - 78px);
+  transition: all 0.5s ease;
+  z-index: 2;
+}
+
+.sidebar.open+.main-body {
+  left: 250px;
+  width: calc(100% - 250px);
+}
+
+/* CSS necessary for sidebar to function END */
+</style>
+
+<!-- 
 <style scoped>
 header {
   line-height: 1.5;
@@ -88,4 +110,4 @@ nav a:first-of-type {
     margin-top: 1rem;
   }
 }
-</style>
+</style> -->

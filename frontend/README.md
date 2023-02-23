@@ -70,3 +70,5 @@ npm run lint
 Below is a list of references used for creating the frontend side of this application
 - https://vuejs.org/style-guide/
 - https://vitejs.dev/config/
+- https://github.com/cawa-93/iconify-prerendered
+- https://www.codinglabweb.com/2021/04/responsive-side-navigation-bar-in-html.html
