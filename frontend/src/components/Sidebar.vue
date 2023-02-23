@@ -1,12 +1,12 @@
 <template>
   <div class="sidebar" :class="{ open: isOpen, }">
     <div class="logo-details">
-      <!-- <img alt="placeholder" src="@/assets/full-logo.svg" width="50" height="50" /> -->
-      <img v-if="isOpen" alt="placeholder" src="@/assets/mini-logo.svg" width="50" height="50" />
-
-      <div class="logo_name">PostgreScrutiniser</div>
-      <IconBxMenu id="btn" v-if="!isOpen" @click=toggleCloseButton() />
-      <IconBxMenuAltRight id="btn" v-else @click=toggleCloseButton() />
+      <img class="icon" alt="logo" src="@/assets/mini-logo.svg" width="50" height="50" />
+      <span class="logo_name">PostgreScrutiniser</span>
+      <span class="svg-box">
+        <IconBxMenu id="btn" v-if="!isOpen" @click=toggleCloseButton() />
+        <IconBxMenuAltRight id="btn" v-else @click=toggleCloseButton() />
+      </span>
     </div>
     <ul class="nav-list">
       <li>
@@ -14,7 +14,7 @@
           <span class="svg-box">
             <IconBxGridAlt />
           </span>
-          <span class="links_name">Dashboard</span>
+          <span class="links_name">Runtime Configurations</span>
         </a>
         <span class="tooltip">Dashboard</span>
       </li>
@@ -38,13 +38,14 @@
       </li>
       <li class="profile">
         <div class="profile-details">
-          <img src="profile.jpg" alt="profileImg">
-          <div class="name_job">
-            <div class="name">Prem Shahi</div>
-            <div class="job">Web designer</div>
+          <div class>
+            <div class="username">username</div>
+            <div class="domain">exampledomain.com</div>
           </div>
         </div>
-        <IconBxLogOut />
+        <!-- <span class="svg-box"> -->
+        <IconBxLogOut id="log_out" @click="logout()" />
+        <!-- </span> -->
       </li>
     </ul>
   </div>
@@ -57,7 +58,12 @@ import { IconBxMenu, IconBxMenuAltRight, IconBxGridAlt, IconBxUser, IconBxLogOut
 const isOpen = ref<boolean>(false)
 
 function toggleCloseButton() {
+  console.log('the heck');
   isOpen.value = !isOpen.value
+}
+
+function logout() {
+  console.log('Logout not implemented yet');
 }
 </script>
 
@@ -86,19 +92,25 @@ function toggleCloseButton() {
 }
 
 .sidebar.open {
-  width: 250px;
+  width: 310px;
 }
 
 .sidebar .logo-details {
   height: 60px;
   display: flex;
   align-items: center;
-  position: relative;
 }
 
 .sidebar .logo-details .icon {
   opacity: 0;
   transition: all 0.5s ease;
+}
+
+.sidebar .logo-details .svg-box {
+  display: flex;
+  justify-content: center;
+  position: absolute;
+  right: 0;
 }
 
 .sidebar .logo-details .logo_name {
@@ -109,6 +121,7 @@ function toggleCloseButton() {
   transition: all 0.5s ease;
 }
 
+
 .sidebar.open .logo-details .icon,
 .sidebar.open .logo-details .logo_name {
   opacity: 1;
@@ -117,12 +130,8 @@ function toggleCloseButton() {
 .sidebar .logo-details #btn {
   position: absolute;
   top: 50%;
-  right: 0;
   transform: translateY(-50%);
   font-size: 22px;
-  transition: all 0.4s ease;
-  font-size: 23px;
-  text-align: center;
   cursor: pointer;
   transition: all 0.5s ease;
 }
@@ -130,6 +139,10 @@ function toggleCloseButton() {
 .sidebar.open .logo-details #btn {
   text-align: right;
 }
+
+/* .sidebar .logo-details #btn {
+  text-align: center;
+} */
 
 .sidebar .nav-list {
   margin-top: 20px;
@@ -180,8 +193,15 @@ function toggleCloseButton() {
   align-items: center;
   text-decoration: none;
   transition: all 0.4s ease;
-  /* background: #11101D; */
   color: var(--vt-c-white);
+
+  /* 
+  Any of these would work for wrapping text
+  but then when sidebar is not expanded the view would be broken
+  */
+  /* overflow-wrap: break-word; */
+  /* word-wrap: break-word; */
+  /* flex-wrap: wrap; */
 }
 
 .sidebar li a:hover {
@@ -189,11 +209,15 @@ function toggleCloseButton() {
 }
 
 .sidebar li a .links_name {
-  color: #fff;
   font-size: 15px;
   font-weight: 400;
   white-space: nowrap;
   opacity: 0;
+  /* 
+  for now leaving pointer-events uncommented
+  but if navigation with links does not work,
+  this is the culprit
+  */
   pointer-events: none;
   transition: 0.4s;
 }
@@ -210,14 +234,22 @@ function toggleCloseButton() {
   color: #11101D;
 }
 
+.sidebar .svg-box {
+  color: #fff;
+  height: 60px;
+  min-width: 50px;
+  font-size: 28px;
+  text-align: center;
+  line-height: 60px;
+}
+
 .sidebar li .svg-box {
   height: 50px;
-  min-width: 50px;
   line-height: 50px;
   font-size: 18px;
   border-radius: 12px;
-  text-align: center;
 }
+
 
 /* prie sito sugrizt. Ciuju tiesiog logout mygtukas bus ir tiek */
 .sidebar li.profile {
@@ -227,13 +259,13 @@ function toggleCloseButton() {
   left: 0;
   bottom: -8px;
   padding: 10px 14px;
-  background: #1d1b31;
+  background: #000000;
   transition: all 0.5s ease;
   overflow: hidden;
 }
 
 .sidebar.open li.profile {
-  width: 250px;
+  width: 310px;
 }
 
 .sidebar li .profile-details {
@@ -242,23 +274,15 @@ function toggleCloseButton() {
   flex-wrap: nowrap;
 }
 
-.sidebar li img {
-  height: 45px;
-  width: 45px;
-  object-fit: cover;
-  border-radius: 6px;
-  margin-right: 10px;
-}
-
-.sidebar li.profile .name,
-.sidebar li.profile .job {
+.sidebar li.profile .username,
+.sidebar li.profile .domain {
   font-size: 15px;
   font-weight: 400;
   color: #fff;
   white-space: nowrap;
 }
 
-.sidebar li.profile .job {
+.sidebar li.profile .domain {
   font-size: 12px;
 }
 
@@ -268,15 +292,15 @@ function toggleCloseButton() {
   right: 0;
   transform: translateY(-50%);
   background: #1d1b31;
-  width: 100%;
-  height: 60px;
+  /* width: 18px;
+  height: 18px;
   line-height: 60px;
-  border-radius: 0px;
+  border-radius: 0px; */
   transition: all 0.5s ease;
 }
 
 .sidebar.open .profile #log_out {
-  width: 50px;
+  /* width: 50px; */
   background: none;
 }
 

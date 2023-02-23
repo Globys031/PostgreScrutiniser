@@ -40,7 +40,7 @@ import HelloWorld from "./components/HelloWorld.vue";
 }
 
 .sidebar.open+.main-body {
-  left: 250px;
+  left: 310px;
   width: calc(100% - 250px);
 }
 
