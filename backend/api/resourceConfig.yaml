@@ -1,0 +1,123 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: PostgreScrutiniser
+  description: Resource Configurations API
+servers:
+  - url: http://localhost:8080/api
+paths:
+  /resource:
+    get:
+      description: |
+        Returns all resource configuration check results
+      operationId: getResourceConfigs
+      responses:
+        '200':
+          description: success response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/resourceConfig'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /resource/{config}:
+    get:
+      description: Returns a specific resource check
+      operationId: getResourceConfigById
+      parameters:
+        - name: config
+          in: path
+          description: name of resource config to get
+          required: true
+          schema:
+            type: string
+            enum: ["autovacuum_work_mem", "dynamic_shared_memory_type", "hash_mem_multiplier", "huge_page_size", "huge_pages", "maintenance_work_mem", "max_prepared_transactions", "max_stack_depth", "shared_buffers", "shared_memory_type", "temp_buffers", "work_mem", "logical_decoding_work_mem"]
+      responses:
+        '200':
+          description: success response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/resourceConfig'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    resourceConfig:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the setting
+        value:
+          type: string
+          description: Value of the setting
+        vartype:
+          type: string
+          description: Type of the value (boolean, integer, enum, etc.)
+        unit:
+          type: string
+          description: Unit of measurement (s, ms, kB, 8kB, etc.)
+        min_val:
+          type: string
+          description: Minimum allowed value (needed for validation)
+        max_val:
+          type: string
+          description: Maximum allowed value (needed for validation)
+        enum_vals:
+          type: string
+          description: specifies what type of values setting could have
+        suggested_value:
+          type: string
+          description: Value that will be suggested after running check
+        details:
+          type: string
+          description: Details informing why a value was suggested
+        requires_restart:
+          type: boolean
+          description: Whether a restart is required after changing the value
+        got_error:
+          type: boolean
+          description: specifies whether check got an error
+      example:
+        - name: setting1
+          value: true
+          vartype: boolean
+          unit: null
+          min_Val: null
+          max_Val: null
+          suggested_value: null
+          details: null
+          requires_Restart: false
+          got_error: true
+        - name: setting2
+          value: 100
+          vartype: integer
+          unit: ms
+          min_val: 0
+          max_val: 1000
+          suggested_value: 500
+          details: "Recommended value for better performance"
+          requires_restart: true
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string

@@ -3,6 +3,8 @@
 package web
 
 import (
+	"github.com/Globys031/PostgreScrutiniser/backend/utils"
+	"github.com/Globys031/PostgreScrutiniser/backend/web/resourceConfig"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	// "github.com/Globys031/plotzemis/go/auth"
@@ -15,7 +17,21 @@ import (
 // }
 
 // func RegisterRoutes(svc *AuthService) *gin.Engine {
-func RegisterRoutes() *gin.Engine {
+func RegisterRoutes(logger *utils.Logger) *gin.Engine {
+	////////////////////////
+	// Initialise logging
+	// logger := utils.InitLogging()
+
+	////////////////////////
+	// Implementations
+	resourceConfigApi := &resourceConfig.ResourceConfigImpl{
+		Logger: logger,
+		// Configuration: nil,
+	}
+
+	////////////////////////
+	// Route configurations
+
 	router := gin.Default()
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"*"}
@@ -24,13 +40,13 @@ func RegisterRoutes() *gin.Engine {
 	// TO DO: Consider changing this later
 	router.Use(cors.New(config))
 
-	// Each route function decides where to use authentication middleware (if resource should be protected)
-	// inside the function itself
-
-	// TO DO: add middleware for authentification here
-	// routes := router.Group("/api")
-
-	// TO DO: come back and see how routes could be properly registered if using openapi generation
+	// TO DO: add middleware for authentification somewhere here
+	optionsResourceConfig := &resourceConfig.GinServerOptions{
+		BaseURL: "/api",
+		// Middlewares  []MiddlewareFunc
+		// ErrorHandler func(*gin.Context, error, int)
+	}
+	resourceConfig.RegisterHandlersWithOptions(router, resourceConfigApi, *optionsResourceConfig)
 
 	return router
 }

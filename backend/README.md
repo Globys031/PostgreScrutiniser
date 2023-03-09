@@ -30,18 +30,12 @@ Below are details concerning development of this project
 
 Below command uses [oapi-codegen](https://github.com/deepmap/oapi-codegen#overview) to generate API code for Gin framework:
 ```
-oapi-codegen -generate "types" -package types api/example.yaml > web/types/example.go
-oapi-codegen -generate "gin" -package routes api/example.yaml > web/routes/example.go
-oapi-codegen -generate "spec" -package specs api/example.yaml > web/specs/example.go
+NAME=resourceConfig
+oapi-codegen -generate "types" -package ${NAME} api/${NAME}.yaml > web/${NAME}/${NAME}Types.go
+oapi-codegen -generate "gin" -package ${NAME} api/${NAME}.yaml > web/${NAME}/${NAME}Gin.go
+oapi-codegen -generate "spec" -package ${NAME} api/${NAME}.yaml > web/${NAME}/${NAME}Spec.go
 ```
 Change `example` to what code is actually being generated for.
-
-#### TO DO:
-
-Use this for declaring proper imports:
-```
-x-go-type-import
-```
 
 ### References
 

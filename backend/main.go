@@ -2,9 +2,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
 
-	"github.com/Globys031/PostgreScrutiniser/backend/cmd"
+	// "github.com/Globys031/PostgreScrutiniser/backend/cmd"
+	// "github.com/Globys031/PostgreScrutiniser/backend/utils"
 	"github.com/Globys031/PostgreScrutiniser/backend/utils"
+	"github.com/Globys031/PostgreScrutiniser/backend/web"
 )
 
 var (
@@ -16,13 +19,13 @@ var (
 func main() {
 	flag.Parse() // parses the above flag variables
 
-	////////////////////////
-	// Initialise logging
+	// ////////////////////////
+	// // Initialise logging
 	logger := utils.InitLogging()
 
-	////////////////////////
-	// Run the actual application
-	cmd.RunChecks(logger)
+	// ////////////////////////
+	// // Run the actual application
+	// cmd.RunChecks(logger)
 
 	//////////////////////////
 	// Loads configs
@@ -46,16 +49,17 @@ func main() {
 
 	// //////////////////////////
 	// // Initialise webserver and routes
-	// router := routes.RegisterRoutes(authSvc)
-	// Addr := fmt.Sprintf("%s:%d", host, port)
-	// Addr := fmt.Sprintf(":%d", port)
-	// if *enableTls {
-	// 	if err := router.RunTLS(Addr, *tlsCertFilePath, *tlsKeyFilePath); err != nil {
-	// 		fmt.Errorf("failed starting http2 backend server: %v", err)
-	// 	}
-	// } else {
-	// 	if err := router.Run(Addr); err != nil {
-	// 		fmt.Errorf("failed starting http backend server: %v", err)
-	// 	}
-	// }
+	router := web.RegisterRoutes(logger)
+
+	// router := web.RegisterRoutes(authSvc)
+	Addr := ":8080"
+	if *enableTls {
+		if err := router.RunTLS(Addr, *tlsCertFilePath, *tlsKeyFilePath); err != nil {
+			fmt.Errorf("failed starting http2 backend server: %v", err)
+		}
+	} else {
+		if err := router.Run(Addr); err != nil {
+			fmt.Errorf("failed starting http backend server: %v", err)
+		}
+	}
 }
