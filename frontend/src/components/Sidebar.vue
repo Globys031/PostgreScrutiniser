@@ -40,12 +40,10 @@
         <div class="profile-details">
           <div class>
             <div class="username">username</div>
-            <div class="domain">exampledomain.com</div>
+            <div class="hostname">examplehostname.com</div>
           </div>
         </div>
-        <!-- <span class="svg-box"> -->
         <IconBxLogOut id="log_out" @click="logout()" />
-        <!-- </span> -->
       </li>
     </ul>
   </div>
@@ -58,12 +56,16 @@ import { IconBxMenu, IconBxMenuAltRight, IconBxGridAlt, IconBxUser, IconBxLogOut
 const isOpen = ref<boolean>(false)
 
 function toggleCloseButton() {
-  console.log('the heck');
   isOpen.value = !isOpen.value
 }
 
 function logout() {
   console.log('Logout not implemented yet');
+}
+
+// function for truncating hostname if it's too long
+function truncateText() {
+  console.log('truncateText not implemented yet');
 }
 </script>
 
@@ -140,10 +142,6 @@ function logout() {
   text-align: right;
 }
 
-/* .sidebar .logo-details #btn {
-  text-align: center;
-} */
-
 .sidebar .nav-list {
   margin-top: 20px;
   height: 100%;
@@ -154,7 +152,6 @@ function logout() {
   margin: 8px 0;
   list-style: none;
 }
-
 
 .sidebar li .tooltip {
   position: absolute;
@@ -194,14 +191,6 @@ function logout() {
   text-decoration: none;
   transition: all 0.4s ease;
   color: var(--vt-c-white);
-
-  /* 
-  Any of these would work for wrapping text
-  but then when sidebar is not expanded the view would be broken
-  */
-  /* overflow-wrap: break-word; */
-  /* word-wrap: break-word; */
-  /* flex-wrap: wrap; */
 }
 
 .sidebar li a:hover {
@@ -250,8 +239,6 @@ function logout() {
   border-radius: 12px;
 }
 
-
-/* prie sito sugrizt. Ciuju tiesiog logout mygtukas bus ir tiek */
 .sidebar li.profile {
   position: fixed;
   height: 60px;
@@ -262,51 +249,59 @@ function logout() {
   background: #000000;
   transition: all 0.5s ease;
   overflow: hidden;
+
+  display: flex;
+  justify-content: center;
 }
 
 .sidebar.open li.profile {
   width: 310px;
+  display: block;
 }
 
 .sidebar li .profile-details {
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
+  opacity: 0;
+  transition: all 0.5s ease;
+  cursor: default;
+}
+
+.sidebar.open li .profile-details {
+  opacity: 1;
+  cursor: auto;
 }
 
 .sidebar li.profile .username,
-.sidebar li.profile .domain {
+.sidebar li.profile .hostname {
   font-size: 15px;
   font-weight: 400;
   color: #fff;
   white-space: nowrap;
 }
 
-.sidebar li.profile .domain {
+.sidebar li.profile .hostname {
   font-size: 12px;
 }
 
 .sidebar .profile #log_out {
   position: absolute;
   top: 50%;
-  right: 0;
   transform: translateY(-50%);
-  background: #1d1b31;
-  /* width: 18px;
+  width: 18px;
   height: 18px;
   line-height: 60px;
-  border-radius: 0px; */
-  transition: all 0.5s ease;
+  border-radius: 0px;
 }
 
 .sidebar.open .profile #log_out {
-  /* width: 50px; */
-  background: none;
+  right: 0;
+  width: 50px;
 }
 
-@media (max-width: 420px) {
-  .sidebar li .tooltip {
-    display: none;
-  }
+.sidebar .profile #log_out:hover {
+  transition: all 0.5s ease;
+  cursor: pointer;
 }
 </style>
