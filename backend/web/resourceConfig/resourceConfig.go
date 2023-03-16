@@ -1,13 +1,12 @@
 // Code for PostgreSQL Configuration
-package cmd
+package resourceConfig
 
 import (
 	"bufio"
-	"bytes"
-	"errors"
+	"database/sql"
 	"fmt"
-	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -17,28 +16,8 @@ import (
 	"github.com/Globys031/PostgreScrutiniser/backend/utils"
 )
 
-/*
-TO DO:
-Currently I've modified /var/lib/pgsql/15/data/pg_hba.conf
-to allow all connections without any password on localhost.
-This is bad, should reenable peer authentification later and have code
-take that into account:
-
-[root@localhost backend]# grep trust /var/lib/pgsql/15/data/pg_hba.conf
-*/
-
 // TO DO:
 // also return documentation for every setting (probably best to do on the frontend side actually)
-
-/* TO DO:
-Tam tikri grazins tik general recommendations (ties kurie virs funkcijos) pamarkinti "GENERALREC"
-Pasvarstyt kaip front'e idet... Gal padaryt tris boxes kur
-auksciausiai yra: "found %{n} appliable suggestions"
-zemiau: General recommendations %{n}
-zemiausiai: Passed without suggestions %{n}
-Prie "General recommendations" galima pridet ui-info, kad "this group contains recommendations
-that could not be fully decided based on your system parameters (for example, because PostgreScrutiniser does not know what queries your applications are typically running). Suggestions here should be applied at your own discretion based on details provided"
-*/
 
 /* TO DO:
 Add somewhere in the GUI a prompt that:
@@ -47,7 +26,6 @@ Add somewhere in the GUI a prompt that:
 */
 
 type ResourceSetting struct {
-	// TO DO:Consider having separate maps for differnent vartypes
 	// TO DO: consider removing minVal, maxVal, vartype
 	Name     string // name of the setting
 	Value    string // value of the setting
@@ -69,23 +47,28 @@ type ResourceSetting struct {
 }
 
 type Configuration struct {
-	// postgreUser string
-	// postgreUserPass string
-	path     string // Path to postgresql.conf
-	settings map[string]ResourceSetting
-	// settings [34]string
+	dbHandler    *sql.DB
+	path         string // Path to postgresql.conf
+	autoConfPath string // Path to postgresql.auto.conf
+	backupDir    string // directory to where postgresql.auto.conf will be backed up
+	settings     map[string]ResourceSetting
+	appUser      *utils.User // postgrescrutiniser user
+	postgresUser *utils.User // postgresql user
 }
+
+////////////////////////////////////////////////////////////////////
+// Below are functions used to check and make configuration suggestions
+////////////////////////////////////////////////////////////////////
 
 // Meant for initialising Configuration upon first api call so that same
 // reference can be reused for later calls.
-func InitChecks(logger *utils.Logger) *Configuration {
-	// user, pass := findPostgresCredentials();
+func InitChecks(dbHandler *sql.DB, appUser *utils.User, postgresUser *utils.User, logger *utils.Logger) *Configuration {
+	configFilePath, _ := utils.FindConfigFile(logger)
+	ResourceSettings, _ := getPGSettings(dbHandler, logger)
+	autoConfPath := filepath.Dir(configFilePath) + "/postgresql.auto.conf"
+	backupDir := "/usr/local/postgrescrutiniser/backups"
 
-	// Find path to postgresql.conf and get postgresql settings
-	// Error logging handled inside the functions
-	configFile, _ := findConfigFile(logger)
-	ResourceSettings, _ := getPGSettings(logger)
-	conf := Configuration{path: configFile, settings: ResourceSettings}
+	conf := Configuration{dbHandler: dbHandler, path: configFilePath, autoConfPath: autoConfPath, backupDir: backupDir, settings: ResourceSettings, appUser: appUser, postgresUser: postgresUser}
 
 	return &conf
 }
@@ -109,50 +92,8 @@ func RunChecks(conf *Configuration, logger *utils.Logger) *map[string]ResourceSe
 	return &conf.settings
 }
 
-// Function for finding main postgresql user credentials
-// to later be used for peer authentification
-func findPostgresCredentials() (string, error) {
-	panic("findPostgresCredentials not implemented")
-}
-
-// Returns path to postgresql.conf if it exists.
-func findConfigFile(logger *utils.Logger) (string, error) {
-	output, err := exec.Command("psql", "-U", "postgres", "-c", "SHOW config_file").Output()
-	if err != nil {
-		logger.LogError("Failed finding postgresql.conf: " + err.Error())
-		return "", err
-	}
-
-	var filePath string
-	scanner := bufio.NewScanner(bytes.NewReader(output))
-	// Return line that has postgresql.conf in it
-	for scanner.Scan() {
-		line := scanner.Text()
-		if match, _ := regexp.MatchString("postgresql.conf", line); match {
-			filePath = strings.TrimSpace(line)
-			break
-		}
-	}
-
-	// check to confirm postgresql.conf file exists
-	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
-		err = fmt.Errorf("postgresql.conf was found with `psql -U` but could not be opened: %v", err)
-		logger.LogError("Failed finding postgresql.conf: " + err.Error())
-		return "", err
-	}
-
-	if err := scanner.Err(); err != nil {
-		logger.LogError("Failed finding postgresql.conf: " + err.Error())
-		return "", err
-	}
-
-	return filePath, nil
-}
-
-// Stores data returned by `pg_settings` into a map
-// only for settings we're interested in.
-func getPGSettings(logger *utils.Logger) (map[string]ResourceSetting, error) {
-	// Settings we're interested in
+// Stores data returned by `pg_settings` into a map. Only stores settings we're interested in.
+func getPGSettings(dbHandler *sql.DB, logger *utils.Logger) (map[string]ResourceSetting, error) {
 	ResourceSettings := [13]string{"shared_buffers",
 		"huge_pages",
 		"huge_page_size",
@@ -166,133 +107,94 @@ func getPGSettings(logger *utils.Logger) (map[string]ResourceSetting, error) {
 		"max_stack_depth",
 		"shared_memory_type",
 		"dynamic_shared_memory_type"}
-	// ResourceSettings := [33]string{"shared_buffers",
-	// 	"huge_pages",
-	// 	"huge_page_size",
-	// 	"temp_buffers",
-	// 	"max_prepared_transactions",
-	// 	"work_mem",
-	// 	"hash_mem_multiplier",
-	// 	"maintenance_work_mem",
-	// 	"autovacuum_work_mem",
-	// 	"logical_decoding_work_mem",
-	// 	"max_stack_depth",
-	// 	"shared_memory_type",
-	// 	"dynamic_shared_memory_type",
-	// 	"min_dynamic_shared_memory",
-	// 	"temp_file_limit",
-	// 	"vacuum_cost_delay",
-	// 	"vacuum_cost_page_hit",
-	// 	"vacuum_cost_page_miss",
-	// 	"vacuum_cost_page_dirty",
-	// 	"vacuum_cost_limit",
-	// 	"bgwriter_delay",
-	// 	"bgwriter_lru_maxpages",
-	// 	"bgwriter_lru_multiplier",
-	// 	"bgwriter_flush_after",
-	// 	"backend_flush_after",
-	// 	"effective_io_concurrency",
-	// 	"maintenance_io_concurrency",
-	// 	"max_worker_processes",
-	// 	"max_parallel_workers_per_gather",
-	// 	"max_parallel_maintenance_workers",
-	// 	"max_parallel_workers",
-	// 	"parallel_leader_participation",
-	// 	"old_snapshot_threshold"}
 
-	// Use exec.Command to run the `psql` command and capture the output
-	cmd := exec.Command("psql", "-U", "postgres", "-c", "select name,setting,vartype,unit,min_val,max_val,enumvals from pg_settings")
-	out, err := cmd.CombinedOutput()
+	// Prepare the SQL statement
+	stmt, err := dbHandler.Prepare("SELECT name,setting,vartype,unit,min_val,max_val,enumvals FROM pg_settings")
 	if err != nil {
-		logger.LogError("Failed fetching PostgreSql settings: " + err.Error())
+		logger.LogError("Failed preparing SQL statement: " + err.Error())
 		return nil, err
 	}
+	defer stmt.Close()
+
+	// Query the database
+	rows, err := stmt.Query()
+	if err != nil {
+		logger.LogError("Failed querying Postgres: " + err.Error())
+		return nil, err
+	}
+	defer rows.Close()
 
 	// Initialize the map to store the results
 	settingsMap := make(map[string]ResourceSetting)
 
-	// Use bufio.NewScanner to read the output line by line
-	scanner := bufio.NewScanner(strings.NewReader(string(out)))
-	for scanner.Scan() {
-		line := scanner.Text()
+	// Use rows.Next() to read the output row by row
+	for rows.Next() {
+		var name, setting, vartype, unit, minVal, maxVal, EnumVals sql.NullString
+		if err := rows.Scan(&name, &setting, &vartype, &unit, &minVal, &maxVal, &EnumVals); err != nil {
+			logger.LogError("Failed scanning row: " + err.Error())
+			return nil, err
+		}
 
-		// Use regexp.MatchString to check if the line contains one of the ResourceSettings
+		// Use regexp.MatchString to check if row contains one of the ResourceSettings
 		for _, resource := range ResourceSettings {
-			match, _ := regexp.MatchString(resource, line)
+			match, _ := regexp.MatchString(resource, name.String)
 			if match {
-				// If the line contains a ResourceSetting, split it by "|"
-				// and store the name and setting in the map
-				fields := strings.Split(line, "|")
-				name := strings.TrimSpace(fields[0])
-				value := strings.TrimSpace(fields[1])
-				vartype := strings.TrimSpace(fields[2])
-				unit := strings.TrimSpace(fields[3])
-				minVal := strings.TrimSpace(fields[4])
-				maxVal := strings.TrimSpace(fields[5])
-				EnumVals := strings.TrimSpace(fields[6])
-
+				// If the line contains a ResourceSetting, store the name and setting in the map
 				resSetting := ResourceSetting{
-					Name:     name,     // name of the setting
-					Value:    value,    // value of the setting
-					Vartype:  vartype,  // what type value is (boolean, integer, enum, etc...)
-					Unit:     unit,     // s, ms, kB, 8kB, etc...
-					MinVal:   minVal,   // Minimum allowed value (needed for validation)
-					MaxVal:   maxVal,   // Maximum allowed value (needed for validation)
-					EnumVals: EnumVals, // If an enumrator, this stores enum values
+					Name:     name.String,     // name of the setting
+					Value:    setting.String,  // value of the setting
+					Vartype:  vartype.String,  // what type value is (boolean, integer, enum, etc...)
+					Unit:     unit.String,     // s, ms, kB, 8kB, etc...
+					MinVal:   minVal.String,   // Minimum allowed value (needed for validation)
+					MaxVal:   maxVal.String,   // Maximum allowed value (needed for validation)
+					EnumVals: EnumVals.String, // If an enumrator, this stores enum values
 				}
 
-				settingsMap[name] = resSetting
+				settingsMap[name.String] = resSetting
 				break
 			}
 		}
 	}
-
 	// Return map of runtime config settings
 	return settingsMap, nil
 }
 
-func getSpecificPGSetting(setting string) (*ResourceSetting, error) {
-	formattedArg := fmt.Sprintf("select name,setting,vartype,unit,min_val,max_val,enumvals from pg_settings WHERE name = '%s'", setting)
-
-	// Execute command to fetch postgre setting
-	cmd := exec.Command("psql", "-U", "postgres", "-c", formattedArg)
-	out, err := cmd.CombinedOutput()
+func (conf *Configuration) getSpecificPGSetting(settingName string, logger *utils.Logger) (*ResourceSetting, error) {
+	// Prepare the SQL statement
+	formattedArg := fmt.Sprintf("SELECT name,setting,vartype,unit,min_val,max_val,enumvals FROM pg_settings WHERE name = '%s'", settingName)
+	stmt, err := conf.dbHandler.Prepare(formattedArg)
 	if err != nil {
+		logger.LogError("Failed preparing SQL statement: " + err.Error())
 		return nil, err
 	}
+	defer stmt.Close()
 
-	// This will store the final result of the setting to be restored
-	var returnSetting ResourceSetting
+	// Query the database
+	rows, err := stmt.Query()
+	if err != nil {
+		logger.LogError("Failed querying Postgres: " + err.Error())
+		return nil, err
+	}
+	defer rows.Close()
 
-	// Use bufio.NewScanner to read the output line by line until we get the line with setting
-	scanner := bufio.NewScanner(strings.NewReader(string(out)))
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		match, _ := regexp.MatchString(setting, line)
-		if match {
-			fields := strings.Split(line, "|")
-			name := strings.TrimSpace(fields[0])
-			value := strings.TrimSpace(fields[1])
-			vartype := strings.TrimSpace(fields[2])
-			unit := strings.TrimSpace(fields[3])
-			minVal := strings.TrimSpace(fields[4])
-			maxVal := strings.TrimSpace(fields[5])
-			EnumVals := strings.TrimSpace(fields[6])
-
-			returnSetting = ResourceSetting{
-				Name:     name,     // name of the setting
-				Value:    value,    // value of the setting
-				Vartype:  vartype,  // what type value is (boolean, integer, enum, etc...)
-				Unit:     unit,     // s, ms, kB, 8kB, etc...
-				MinVal:   minVal,   // Minimum allowed value (needed for validation)
-				MaxVal:   maxVal,   // Maximum allowed value (needed for validation)
-				EnumVals: EnumVals, // If an enumrator, this stores enum values
-			}
-		}
+	// Read and return first resulting row
+	rows.Next()
+	var name, setting, vartype, unit, minVal, maxVal, EnumVals sql.NullString
+	if err := rows.Scan(&name, &setting, &vartype, &unit, &minVal, &maxVal, &EnumVals); err != nil {
+		logger.LogError("Failed scanning row: " + err.Error())
+		return nil, err
+	}
+	resSetting := ResourceSetting{
+		Name:     name.String,     // name of the setting
+		Value:    setting.String,  // value of the setting
+		Vartype:  vartype.String,  // what type value is (boolean, integer, enum, etc...)
+		Unit:     unit.String,     // s, ms, kB, 8kB, etc...
+		MinVal:   minVal.String,   // Minimum allowed value (needed for validation)
+		MaxVal:   maxVal.String,   // Maximum allowed value (needed for validation)
+		EnumVals: EnumVals.String, // If an enumrator, this stores enum values
 	}
 
-	return &returnSetting, nil
+	return &resSetting, nil
 }
 
 // Function used to ensure that parameter value being set
@@ -502,7 +404,7 @@ func (conf *Configuration) CheckMaxPreparedTransactions(logger *utils.Logger) (*
 
 	// !!! consider passing this as an argument because there are currently two
 	// separate functions that ask for max_connections
-	maxConnections, err := getSpecificPGSetting("max_connections")
+	maxConnections, err := conf.getSpecificPGSetting("max_connections", logger)
 	if err != nil {
 		logger.LogError("Failed max_prepared_transactions check: " + err.Error())
 		maxPreparedTransactions.GotError = true
@@ -529,7 +431,7 @@ func (conf *Configuration) CheckWorkMem(logger *utils.Logger) (*ResourceSetting,
 		workMem.GotError = true
 		return nil, err
 	}
-	maxConnections, err := getSpecificPGSetting("max_connections")
+	maxConnections, err := conf.getSpecificPGSetting("max_connections", logger)
 	if err != nil {
 		logger.LogError("Failed work_mem check: " + err.Error())
 		workMem.GotError = true
@@ -592,7 +494,7 @@ func (conf *Configuration) CheckHashMemMultiplier(logger *utils.Logger) (*Resour
 func (conf *Configuration) CheckMaintenanceWorkMem(logger *utils.Logger) (*ResourceSetting, error) {
 	// 1. Get maintenance_work_mem, autovacumm_max_workers and available memory on server
 	maintenanceWorkMem := conf.settings["maintenance_work_mem"]
-	autovacuumMaxWorkers, availableMem, err := getWorkMemRelatedValues(logger, &maintenanceWorkMem)
+	autovacuumMaxWorkers, availableMem, err := conf.getWorkMemRelatedValues(logger, &maintenanceWorkMem)
 	if err != nil {
 		logger.LogError("failed maintenance_work_mem check: " + err.Error())
 		maintenanceWorkMem.GotError = true
@@ -645,7 +547,7 @@ func (conf *Configuration) CheckMaintenanceWorkMem(logger *utils.Logger) (*Resou
 func (conf *Configuration) CheckAutovacuumWorkMem(logger *utils.Logger) (*ResourceSetting, error) {
 	// 1. Get autovacuum_work_mem, autovacumm_max_workers and available memory on server
 	autovacuumWorkMem := conf.settings["autovacuum_work_mem"]
-	autovacuumMaxWorkers, availableMem, err := getWorkMemRelatedValues(logger, &autovacuumWorkMem)
+	autovacuumMaxWorkers, availableMem, err := conf.getWorkMemRelatedValues(logger, &autovacuumWorkMem)
 	if err != nil {
 		logger.LogError("Failed autovacuum_work_mem check: " + err.Error())
 		autovacuumWorkMem.GotError = true
@@ -689,9 +591,9 @@ func (conf *Configuration) CheckAutovacuumWorkMem(logger *utils.Logger) (*Resour
 
 // Function for getting `autovacuum_max_workers` and available memory on server
 // to later be used in checks for `maintenance_work_mem` and `autovacuum_work_mem`
-func getWorkMemRelatedValues(logger *utils.Logger, setting *ResourceSetting) (float32, float32, error) {
+func (conf *Configuration) getWorkMemRelatedValues(logger *utils.Logger, setting *ResourceSetting) (float32, float32, error) {
 	// 1. Get autovacuum_max_workers
-	tmpMaxWorkers, err := getSpecificPGSetting("autovacuum_max_workers")
+	tmpMaxWorkers, err := conf.getSpecificPGSetting("autovacuum_max_workers", logger)
 	if err != nil {
 		logger.LogError("failed getting autovacuum_max_workers: " + err.Error())
 		tmpMaxWorkers.GotError = true
@@ -857,4 +759,80 @@ func suggestDefault(setting *ResourceSetting, details string) error {
 	}
 
 	return nil
+}
+
+////////////////////////////////////////////////////////////////////
+// Below are functions used to apply suggestions
+////////////////////////////////////////////////////////////////////
+
+// Set suggested parameter in postgresql.auto.conf. ALTER SYSTEM SET does not setting a specific unit.
+func (conf *Configuration) setSuggestion(db *sql.DB, paramName string, paramValue string, logger *utils.Logger) error {
+	_, err := db.Exec(fmt.Sprintf("ALTER SYSTEM SET %s = '%s'", paramName, paramValue))
+	if err != nil {
+		logger.LogError(fmt.Sprintf("failed to apply suggestion for %s: %s", paramName, err.Error()))
+		return err
+	}
+	return nil
+}
+
+// Reloads postgresql.conf and postgresql.auto.conf
+func (conf *Configuration) reloadConfiguration(db *sql.DB, logger *utils.Logger) error {
+	_, err := db.Exec("SELECT pg_reload_conf()")
+	if err != nil {
+		logger.LogError(fmt.Sprintf("failed to reload configuration: %s", err.Error()))
+		return err
+	}
+	return nil
+}
+
+/*
+Meant for applying a single suggestion.
+@path - full path to postgresql.auto.conf
+@suggestion - setting to apply suggestion on
+*/
+func (conf *Configuration) ApplySuggestions(suggestions *PatchResourceConfigsJSONBody, logger *utils.Logger) error {
+	// 1. Create a backup of postgresql.auto.conf
+	if err := utils.BackupFile(conf.autoConfPath, conf.backupDir, conf.appUser, logger); err != nil {
+		return err
+	}
+
+	// 2. Execute ALTER SYSTEM to apply all suggestions
+	gotError := false
+	for _, suggestion := range *suggestions {
+		err := conf.setSuggestion(conf.dbHandler, suggestion.Name, suggestion.SuggestedValue, logger)
+		if err != nil {
+			gotError = true
+		}
+	}
+	// 3. Reload the configuration file to apply the changes
+	conf.reloadConfiguration(conf.dbHandler, logger)
+
+	if gotError {
+		return fmt.Errorf("One or more suggestion could not be applied")
+	}
+	return nil
+}
+
+/*
+@path - path to the backup file
+*/
+func RestoreBackup(path string, logger *utils.Logger) error {
+	panic("not implemented yet")
+}
+
+// File for resetting all postgresql.auto.conf configurations. Essentially resets to default
+// before any configs were applied
+func ResetAutoConf() {
+	// RESET ALL
+	panic("not implemented yet")
+}
+
+// Removes all backups of postgresql.auto.conf
+func RemoveAutoConfBackups() {
+	panic("not implemented yet")
+}
+
+// Removes backup of postgresql.auto.conf
+func RemoveAutoConfBackup() {
+	panic("not implemented yet")
 }

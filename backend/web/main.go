@@ -3,6 +3,8 @@
 package web
 
 import (
+	"database/sql"
+
 	"github.com/Globys031/PostgreScrutiniser/backend/utils"
 	"github.com/Globys031/PostgreScrutiniser/backend/web/resourceConfig"
 	"github.com/gin-contrib/cors"
@@ -17,21 +19,16 @@ import (
 // }
 
 // func RegisterRoutes(svc *AuthService) *gin.Engine {
-func RegisterRoutes(logger *utils.Logger) *gin.Engine {
-	////////////////////////
-	// Initialise logging
-	// logger := utils.InitLogging()
-
-	////////////////////////
-	// Implementations
+func RegisterRoutes(dbHandler *sql.DB, appUser *utils.User, postgresUser *utils.User, logger *utils.Logger) *gin.Engine {
 	resourceConfigApi := &resourceConfig.ResourceConfigImpl{
-		Logger: logger,
-		// Configuration: nil,
+		Logger:       logger,
+		AppUser:      appUser,
+		PostgresUser: postgresUser,
+		DbHandler:    dbHandler,
 	}
 
 	////////////////////////
 	// Route configurations
-
 	router := gin.Default()
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"*"}

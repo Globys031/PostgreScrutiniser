@@ -26,6 +26,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    patch:
+      description: applies one or more suggestions
+      operationId: patchResourceConfigs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/resourceConfigPatchSchema'
+      responses:
+        '201':
+          description: Resource configuration created successfully
+        '400':
+          description: Invalid request body
   /resource/{config}:
     get:
       description: Returns a specific resource check
@@ -90,6 +106,7 @@ components:
           type: boolean
           description: specifies whether check got an error
       example:
+      # TO DO: use an actual config as an example instead of `setting1`
         - name: setting1
           value: true
           vartype: boolean
@@ -109,7 +126,22 @@ components:
           suggested_value: 500
           details: "Recommended value for better performance"
           requires_restart: true
-
+    resourceConfigPatchSchema:
+      type: object
+      required: 
+        - name
+        - suggested_value
+      properties:
+        name:
+          type: string
+          description: Name of the setting
+        suggested_value:
+          type: string
+          description: Value that will be suggested after running check
+      example:
+      # TO DO: use an actual config as an example instead of `setting1`
+        - name: setting1
+          suggested_value: 1000
     Error:
       type: object
       required:

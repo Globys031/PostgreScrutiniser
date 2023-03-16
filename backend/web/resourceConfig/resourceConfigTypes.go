@@ -62,5 +62,20 @@ type ResourceConfig struct {
 	Vartype *string `json:"vartype,omitempty"`
 }
 
+// ResourceConfigPatchSchema defines model for resourceConfigPatchSchema.
+type ResourceConfigPatchSchema struct {
+	// Name Name of the setting
+	Name string `json:"name"`
+
+	// SuggestedValue Value that will be suggested after running check
+	SuggestedValue string `json:"suggested_value"`
+}
+
+// PatchResourceConfigsJSONBody defines parameters for PatchResourceConfigs.
+type PatchResourceConfigsJSONBody = []ResourceConfigPatchSchema
+
 // GetResourceConfigByIdParamsConfig defines parameters for GetResourceConfigById.
 type GetResourceConfigByIdParamsConfig string
+
+// PatchResourceConfigsJSONRequestBody defines body for PatchResourceConfigs for application/json ContentType.
+type PatchResourceConfigsJSONRequestBody = PatchResourceConfigsJSONBody

@@ -17,6 +17,9 @@ type ServerInterface interface {
 	// (GET /resource)
 	GetResourceConfigs(c *gin.Context)
 
+	// (PATCH /resource)
+	PatchResourceConfigs(c *gin.Context)
+
 	// (GET /resource/{config})
 	GetResourceConfigById(c *gin.Context, config GetResourceConfigByIdParamsConfig)
 }
@@ -38,6 +41,16 @@ func (siw *ServerInterfaceWrapper) GetResourceConfigs(c *gin.Context) {
 	}
 
 	siw.Handler.GetResourceConfigs(c)
+}
+
+// PatchResourceConfigs operation middleware
+func (siw *ServerInterfaceWrapper) PatchResourceConfigs(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+	}
+
+	siw.Handler.PatchResourceConfigs(c)
 }
 
 // GetResourceConfigById operation middleware
@@ -91,6 +104,8 @@ func RegisterHandlersWithOptions(router *gin.Engine, si ServerInterface, options
 	}
 
 	router.GET(options.BaseURL+"/resource", wrapper.GetResourceConfigs)
+
+	router.PATCH(options.BaseURL+"/resource", wrapper.PatchResourceConfigs)
 
 	router.GET(options.BaseURL+"/resource/:config", wrapper.GetResourceConfigById)
 

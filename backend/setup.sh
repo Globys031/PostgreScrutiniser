@@ -15,6 +15,8 @@ read POSTGREUSER
 echo "What is its password?"
 read PASSWORD
 
+echo "postgrescrutiniser  ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
 PORT=$(lsof -i -P -n | awk '/post/ {print $9}' | awk -F ':' '{print $2}' | head -1)
 if [ $PORT == '' ]
 then
