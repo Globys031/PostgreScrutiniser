@@ -41,20 +41,20 @@ func InitLogging() *Logger {
 }
 
 // Log warnings to both console and error.log
-func (logger *Logger) LogWarning(message string) {
-	logger.console.Println("WARNING:", message)
-	logger.file.Println("WARNING:", message)
+func (logger *Logger) LogWarning(message error) {
+	logger.console.Println("WARNING:", message.Error())
+	logger.file.Println("WARNING:", message.Error())
 }
 
 // Log errors to both console and error.log
-func (logger *Logger) LogError(message string) {
-	logger.console.Println("ERROR:", message)
-	logger.file.Println("ERROR:", message)
+func (logger *Logger) LogError(message error) {
+	logger.console.Println("ERROR:", message.Error())
+	logger.file.Println("ERROR:", message.Error())
 }
 
 // Log fatal error to both console and error.log and exit
-func (logger *Logger) LogFatal(message string) {
-	logger.console.Println("FATAL:", message)
-	logger.file.Println("FATAL:", message)
+func (logger *Logger) LogFatal(message error) {
+	logger.console.Println("FATAL:", message.Error())
+	logger.file.Println("FATAL:", message.Error())
 	os.Exit(1)
 }

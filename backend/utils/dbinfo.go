@@ -23,7 +23,7 @@ func ParsePgpassFile(appUser *User, logger *Logger) (string, string, string, str
 	// Get the home directory of our application user
 	usr, err := user.Lookup(appUser.Username)
 	if err != nil {
-		logger.LogError(fmt.Sprintf("Failed to find %s home directory: %s"+appUser.Username, err.Error()))
+		logger.LogError(fmt.Errorf("Failed to find %s home directory: %v", appUser.Username, err.Error()))
 		return "", "", "", "", "", err
 	}
 	homeDir := usr.HomeDir
@@ -31,7 +31,7 @@ func ParsePgpassFile(appUser *User, logger *Logger) (string, string, string, str
 	// Open the .pgpass file for reading
 	pgpassFile, err := os.Open(homeDir + "/.pgpass")
 	if err != nil {
-		logger.LogError(fmt.Sprintf("Failed to find %s's .pgpass file: %s"+appUser.Username, err.Error()))
+		logger.LogError(fmt.Errorf("Failed to find %s home directory: %v", appUser.Username, err.Error()))
 		return "", "", "", "", "", err
 	}
 	defer pgpassFile.Close()
@@ -49,7 +49,7 @@ func ParsePgpassFile(appUser *User, logger *Logger) (string, string, string, str
 func InitDbConnection(hostname string, user string, passwd string, port string, logger *Logger) (*sql.DB, error) {
 	if hostname == "" || user == "" || passwd == "" || port == "" {
 		err := fmt.Errorf("Could not initiate database connection bcause one of the fields was empty")
-		logger.LogError(err.Error())
+		logger.LogError(err)
 		return nil, err
 	}
 
@@ -57,7 +57,7 @@ func InitDbConnection(hostname string, user string, passwd string, port string, 
 
 	dbConn, err := sql.Open("postgres", connString)
 	if err != nil {
-		logger.LogError("Could not initiate database connection: " + err.Error())
+		logger.LogError(fmt.Errorf("Could not initiate database connection: %v", err))
 		return nil, err
 	}
 
@@ -70,7 +70,7 @@ func CloseDbConnection(dbHandler *sql.DB, logger *Logger) error {
 	}
 
 	if err := dbHandler.Close(); err != nil {
-		logger.LogError("Could not initiate database connection: " + err.Error())
+		logger.LogError(fmt.Errorf("Could not initiate database connection: %v", err))
 		return err
 	}
 	return nil
@@ -82,7 +82,7 @@ func FindConfigFile(logger *Logger) (string, error) {
 	output, err := exec.Command("psql", "-w", "-U", "postgres", "-c", "SHOW config_file").Output()
 
 	if err != nil {
-		logger.LogError("Failed finding postgresql.conf: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed finding postgresql.conf: %v", err))
 		return "", err
 	}
 
@@ -100,12 +100,12 @@ func FindConfigFile(logger *Logger) (string, error) {
 	// check to confirm postgresql.conf file exists
 	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
 		err = fmt.Errorf("postgresql.conf was found with `psql -U` but could not be opened: %v", err)
-		logger.LogError("Failed finding postgresql.conf: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed finding postgresql.conf: %v", err))
 		return "", err
 	}
 
 	if err := scanner.Err(); err != nil {
-		logger.LogError("Failed finding postgresql.conf: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed finding postgresql.conf: %v", err))
 		return "", err
 	}
 

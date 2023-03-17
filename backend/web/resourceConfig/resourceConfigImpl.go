@@ -37,22 +37,25 @@ func (impl *ResourceConfigImpl) GetResourceConfigs(c *gin.Context) {
 	data := RunChecks(impl.Configuration, impl.Logger)
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		errorMsg := &ErrorMessage{
+			ErrorMessage: err.Error(),
+		}
+		c.JSON(http.StatusInternalServerError, &errorMsg)
 		return
 	}
 
 	c.Data(http.StatusAccepted, "application/json", jsonData)
 }
+
 func (impl *ResourceConfigImpl) GetResourceConfigById(c *gin.Context, config GetResourceConfigByIdParamsConfig) {
 	// Reuse the same reference that contains resource setting details
 	if impl.Configuration == nil {
 		impl.Configuration = InitChecks(impl.DbHandler, impl.AppUser, impl.PostgresUser, impl.Logger)
 	}
 
-	configName := c.Param("config")
 	var configData *ResourceSetting
 	var err error
-	switch configName {
+	switch config {
 	case "autovacuum_work_mem":
 		configData, err = impl.Configuration.CheckAutovacuumWorkMem(impl.Logger)
 	case "dynamic_shared_memory_type":
@@ -80,12 +83,18 @@ func (impl *ResourceConfigImpl) GetResourceConfigById(c *gin.Context, config Get
 	case "logical_decoding_work_mem":
 		configData, err = impl.Configuration.ChecklogicalDecodingWorkMem(impl.Logger)
 	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("No resource configuration with name: %s", configName)})
+		errorMsg := &ErrorMessage{
+			ErrorMessage: fmt.Sprintf("No resource configuration with name: %s", config),
+		}
+		c.JSON(http.StatusBadRequest, errorMsg)
 		return
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get suggestion. See /var/log/postgrescrutiniser/error.log for more details"})
+		errorMsg := &ErrorMessage{
+			ErrorMessage: "Could not get suggestion. See /var/log/postgrescrutiniser/error.log for more details",
+		}
+		c.JSON(http.StatusInternalServerError, errorMsg)
 		return
 	}
 	c.JSON(http.StatusAccepted, configData)
@@ -96,11 +105,17 @@ func (impl *ResourceConfigImpl) PatchResourceConfigs(c *gin.Context) {
 	// Bind post body and validate
 	suggestions := PatchResourceConfigsJSONBody{}
 	if err := c.BindJSON(&suggestions); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "incorrect payload format"})
+		errorMsg := &ErrorMessage{
+			ErrorMessage: "incorrect payload format",
+		}
+		c.AbortWithStatusJSON(http.StatusBadRequest, errorMsg)
 		return
 	}
 	if len(suggestions) == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "empty payload array"})
+		errorMsg := &ErrorMessage{
+			ErrorMessage: "empty payload array",
+		}
+		c.AbortWithStatusJSON(http.StatusBadRequest, errorMsg)
 		return
 	}
 
@@ -111,8 +126,19 @@ func (impl *ResourceConfigImpl) PatchResourceConfigs(c *gin.Context) {
 
 	err := impl.Configuration.ApplySuggestions(&suggestions, impl.Logger)
 	if err != nil {
-		errorMessage := fmt.Sprintf("%s. See /var/log/postgrescrutiniser/error.log for more details", err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": errorMessage})
+		errorMsg := &ErrorMessage{
+			ErrorMessage: fmt.Sprintf("%s. See /var/log/postgrescrutiniser/error.log for more details", err.Error()),
+		}
+		c.JSON(http.StatusInternalServerError, errorMsg)
 		return
+	}
+}
+
+func (impl *ResourceConfigImpl) DeleteResourceConfigs(c *gin.Context) {
+	if err := impl.Configuration.DiscardConfigs(impl.Logger); err != nil {
+		errorMsg := &ErrorMessage{
+			ErrorMessage: err.Error(),
+		}
+		c.JSON(http.StatusInternalServerError, errorMsg)
 	}
 }

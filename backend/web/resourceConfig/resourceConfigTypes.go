@@ -20,10 +20,9 @@ const (
 	WorkMem                 GetResourceConfigByIdParamsConfig = "work_mem"
 )
 
-// Error defines model for Error.
-type Error struct {
-	Code    int32  `json:"code"`
-	Message string `json:"message"`
+// ErrorMessage defines model for ErrorMessage.
+type ErrorMessage struct {
+	ErrorMessage string `json:"error_message"`
 }
 
 // ResourceConfig defines model for resourceConfig.

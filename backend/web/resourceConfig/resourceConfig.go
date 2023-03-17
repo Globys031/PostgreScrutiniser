@@ -111,7 +111,7 @@ func getPGSettings(dbHandler *sql.DB, logger *utils.Logger) (map[string]Resource
 	// Prepare the SQL statement
 	stmt, err := dbHandler.Prepare("SELECT name,setting,vartype,unit,min_val,max_val,enumvals FROM pg_settings")
 	if err != nil {
-		logger.LogError("Failed preparing SQL statement: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed preparing SQL statement: %v", err))
 		return nil, err
 	}
 	defer stmt.Close()
@@ -119,7 +119,7 @@ func getPGSettings(dbHandler *sql.DB, logger *utils.Logger) (map[string]Resource
 	// Query the database
 	rows, err := stmt.Query()
 	if err != nil {
-		logger.LogError("Failed querying Postgres: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed querying Postgres: %v", err))
 		return nil, err
 	}
 	defer rows.Close()
@@ -131,7 +131,7 @@ func getPGSettings(dbHandler *sql.DB, logger *utils.Logger) (map[string]Resource
 	for rows.Next() {
 		var name, setting, vartype, unit, minVal, maxVal, EnumVals sql.NullString
 		if err := rows.Scan(&name, &setting, &vartype, &unit, &minVal, &maxVal, &EnumVals); err != nil {
-			logger.LogError("Failed scanning row: " + err.Error())
+			logger.LogError(fmt.Errorf("Failed scanning row: %v", err))
 			return nil, err
 		}
 
@@ -164,7 +164,7 @@ func (conf *Configuration) getSpecificPGSetting(settingName string, logger *util
 	formattedArg := fmt.Sprintf("SELECT name,setting,vartype,unit,min_val,max_val,enumvals FROM pg_settings WHERE name = '%s'", settingName)
 	stmt, err := conf.dbHandler.Prepare(formattedArg)
 	if err != nil {
-		logger.LogError("Failed preparing SQL statement: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed preparing SQL statement: %v", err))
 		return nil, err
 	}
 	defer stmt.Close()
@@ -172,7 +172,7 @@ func (conf *Configuration) getSpecificPGSetting(settingName string, logger *util
 	// Query the database
 	rows, err := stmt.Query()
 	if err != nil {
-		logger.LogError("Failed querying Postgres: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed querying Postgres: %v", err))
 		return nil, err
 	}
 	defer rows.Close()
@@ -181,7 +181,7 @@ func (conf *Configuration) getSpecificPGSetting(settingName string, logger *util
 	rows.Next()
 	var name, setting, vartype, unit, minVal, maxVal, EnumVals sql.NullString
 	if err := rows.Scan(&name, &setting, &vartype, &unit, &minVal, &maxVal, &EnumVals); err != nil {
-		logger.LogError("Failed scanning row: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed scanning row: %v", err))
 		return nil, err
 	}
 	resSetting := ResourceSetting{
@@ -235,7 +235,7 @@ func (conf *Configuration) CheckSharedBuffers(logger *utils.Logger) (*ResourceSe
 	// 1. Get total server memory
 	totalMemory, err := utils.GetTotalMemory()
 	if err != nil {
-		logger.LogError("Failed shared_buffers check because could not get total server memory: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed shared_buffers check because could not get total server memory: %v", err))
 		sharedBuffers.GotError = true
 		return nil, err
 	}
@@ -244,7 +244,7 @@ func (conf *Configuration) CheckSharedBuffers(logger *utils.Logger) (*ResourceSe
 	totalMemoryAsString := utils.Uint64ToString(totalMemory)
 	totalMemoryConverted, err := utils.ConvertBasedOnUnit(totalMemoryAsString, "B", sharedBuffers.Unit)
 	if err != nil {
-		logger.LogError("Failed shared_buffers check: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed shared_buffers check: %v", err))
 		sharedBuffers.GotError = true
 		return nil, err
 	}
@@ -258,14 +258,14 @@ func (conf *Configuration) CheckSharedBuffers(logger *utils.Logger) (*ResourceSe
 	} else { // Else suggest 30% of what memory is currently available on the server
 		availableMemory, err := utils.GetAvailableMemory()
 		if err != nil {
-			logger.LogError("Failed shared_buffers check because could not get total available memory: " + err.Error())
+			logger.LogError(fmt.Errorf("Failed shared_buffers check because could not get total available memory: %v", err))
 			sharedBuffers.GotError = true
 			return nil, err
 		}
 		availableMemoryAsString := utils.Uint64ToString(availableMemory)
 		availableMemoryConverted, err := utils.ConvertBasedOnUnit(availableMemoryAsString, "B", sharedBuffers.Unit)
 		if err != nil {
-			logger.LogError("Failed shared_buffers check: " + err.Error())
+			logger.LogError(fmt.Errorf("Failed shared_buffers check: %v", err))
 			sharedBuffers.GotError = true
 			return nil, err
 		}
@@ -276,7 +276,7 @@ func (conf *Configuration) CheckSharedBuffers(logger *utils.Logger) (*ResourceSe
 		lowestRecommendedValueAsString := utils.Float32ToString(lowestRecommendedValue)
 		lowestRecommendedValue, err = utils.ConvertBasedOnUnit(lowestRecommendedValueAsString, "MB", sharedBuffers.Unit)
 		if err != nil {
-			logger.LogError("Failed shared_buffers check: " + err.Error())
+			logger.LogError(fmt.Errorf("Failed shared_buffers check: %v", err))
 			sharedBuffers.GotError = true
 			return nil, err
 		}
@@ -302,7 +302,7 @@ func (conf *Configuration) CheckHugePages(logger *utils.Logger) (*ResourceSettin
 	// Get nr_hugepages value
 	kernelPagesString, err := sysctl.Get("vm.nr_hugepages")
 	if err != nil {
-		logger.LogError("Failed huge_pages check: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed huge_pages check: %v", err))
 		hugePages.GotError = true
 		return nil, err
 	}
@@ -337,13 +337,13 @@ func (conf *Configuration) CheckHugePageSize(logger *utils.Logger) (*ResourceSet
 	// Get nr_hugepages value
 	kernelPagesString, err := sysctl.Get("vm.nr_hugepages")
 	if err != nil {
-		logger.LogError("Failed huge_page_size check: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed huge_page_size check: %v", err))
 		hugePageSize.GotError = true
 		return nil, err
 	}
 	kernelNrHugePages, err := strconv.Atoi(kernelPagesString)
 	if err != nil {
-		logger.LogError("Failed huge_page_size check: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed huge_page_size check: %v", err))
 		hugePageSize.GotError = true
 		return nil, err
 	}
@@ -369,14 +369,14 @@ func (conf *Configuration) CheckTempBuffers(logger *utils.Logger) (*ResourceSett
 
 	currentValue, err := utils.StringToUint64(tempBuffers.Value)
 	if err != nil {
-		logger.LogError("Failed temp_buffers check: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed temp_buffers check: %v", err))
 		tempBuffers.GotError = true
 		return nil, err
 	}
 	currentValueAsString := utils.Uint64ToString(currentValue)
 	currentValueConverted, err := utils.ConvertBasedOnUnit(currentValueAsString, "8kB", tempBuffers.Unit)
 	if err != nil {
-		logger.LogError("Failed temp_buffers check: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed temp_buffers check: %v", err))
 		tempBuffers.GotError = true
 		return nil, err
 	}
@@ -387,7 +387,7 @@ func (conf *Configuration) CheckTempBuffers(logger *utils.Logger) (*ResourceSett
 
 		convertedDefault, err := utils.ConvertBasedOnUnit("1024", "8kB", tempBuffers.Unit)
 		if err != nil {
-			logger.LogError("Failed temp_buffers check: " + err.Error())
+			logger.LogError(fmt.Errorf("Failed temp_buffers check: %v", err))
 			tempBuffers.GotError = true
 			return nil, err
 		}
@@ -406,7 +406,7 @@ func (conf *Configuration) CheckMaxPreparedTransactions(logger *utils.Logger) (*
 	// separate functions that ask for max_connections
 	maxConnections, err := conf.getSpecificPGSetting("max_connections", logger)
 	if err != nil {
-		logger.LogError("Failed max_prepared_transactions check: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed max_prepared_transactions check: %v", err))
 		maxPreparedTransactions.GotError = true
 		return nil, err
 	}
@@ -427,13 +427,13 @@ func (conf *Configuration) CheckWorkMem(logger *utils.Logger) (*ResourceSetting,
 	// 1. Get amount of available memory and connections
 	availableMemory, err := utils.GetAvailableMemory()
 	if err != nil {
-		logger.LogError("Failed work_mem check: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed work_mem check: %v", err))
 		workMem.GotError = true
 		return nil, err
 	}
 	maxConnections, err := conf.getSpecificPGSetting("max_connections", logger)
 	if err != nil {
-		logger.LogError("Failed work_mem check: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed work_mem check: %v", err))
 		workMem.GotError = true
 		return nil, err
 	}
@@ -441,7 +441,7 @@ func (conf *Configuration) CheckWorkMem(logger *utils.Logger) (*ResourceSetting,
 	// 2. suggestion = availablememory / max_connections
 	maxConnectionsValue, err := utils.StringToUint64(maxConnections.Value)
 	if err != nil {
-		logger.LogError("Failed work_mem check: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed work_mem check: %v", err))
 		workMem.GotError = true
 		return nil, err
 	}
@@ -462,7 +462,7 @@ func (conf *Configuration) CheckHashMemMultiplier(logger *utils.Logger) (*Resour
 	workMem := conf.settings["work_mem"]
 	workMemValueAsMB, err := utils.ConvertBasedOnUnit(workMem.Value, workMem.Unit, "MB")
 	if err != nil {
-		logger.LogError("Failed hash_mem_multiplier check: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed hash_mem_multiplier check: %v", err))
 		hashMemMultiplier.GotError = true
 		return nil, err
 	}
@@ -471,7 +471,7 @@ func (conf *Configuration) CheckHashMemMultiplier(logger *utils.Logger) (*Resour
 	if workMemValueAsMB > 40 {
 		hashMemMultiplierAsFloat32, err := utils.StringToFloat32(hashMemMultiplier.Value)
 		if err != nil {
-			logger.LogError("Failed hash_mem_multiplier check: " + err.Error())
+			logger.LogError(fmt.Errorf("Failed hash_mem_multiplier check: %v", err))
 			hashMemMultiplier.GotError = true
 			return nil, err
 		}
@@ -496,7 +496,7 @@ func (conf *Configuration) CheckMaintenanceWorkMem(logger *utils.Logger) (*Resou
 	maintenanceWorkMem := conf.settings["maintenance_work_mem"]
 	autovacuumMaxWorkers, availableMem, err := conf.getWorkMemRelatedValues(logger, &maintenanceWorkMem)
 	if err != nil {
-		logger.LogError("failed maintenance_work_mem check: " + err.Error())
+		logger.LogError(fmt.Errorf("failed maintenance_work_mem check: %v", err))
 		maintenanceWorkMem.GotError = true
 		return nil, err
 	}
@@ -513,7 +513,7 @@ func (conf *Configuration) CheckMaintenanceWorkMem(logger *utils.Logger) (*Resou
 
 	suggestionAsMB, err := utils.ConvertBasedOnUnit(utils.Uint64ToString(suggestionRounded), maintenanceWorkMem.Unit, "MB")
 	if err != nil {
-		logger.LogError("Failed maintenance_work_mem check: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed maintenance_work_mem check: %v", err))
 		maintenanceWorkMem.GotError = true
 		return nil, err
 	}
@@ -521,7 +521,7 @@ func (conf *Configuration) CheckMaintenanceWorkMem(logger *utils.Logger) (*Resou
 	if suggestionAsMB < 64 {
 		maintenanceWorkMemAsMB, err := utils.ConvertBasedOnUnit(maintenanceWorkMem.Value, maintenanceWorkMem.Unit, "MB")
 		if err != nil {
-			logger.LogError("Failed maintenance_work_mem check: " + err.Error())
+			logger.LogError(fmt.Errorf("Failed maintenance_work_mem check: %v", err))
 			maintenanceWorkMem.GotError = true
 			return nil, err
 		}
@@ -529,7 +529,7 @@ func (conf *Configuration) CheckMaintenanceWorkMem(logger *utils.Logger) (*Resou
 			maintenanceWorkMem.Details = "Currently there is not enough available memory on the server to go above default maintenance_work_mem value"
 			defaultAsUnit, err := utils.ConvertBasedOnUnit("64", "MB", maintenanceWorkMem.Unit)
 			if err != nil {
-				logger.LogError("Failed maintenance_work_mem check: " + err.Error())
+				logger.LogError(fmt.Errorf("Failed maintenance_work_mem check: %v", err))
 				maintenanceWorkMem.GotError = true
 				return nil, err
 			}
@@ -549,7 +549,7 @@ func (conf *Configuration) CheckAutovacuumWorkMem(logger *utils.Logger) (*Resour
 	autovacuumWorkMem := conf.settings["autovacuum_work_mem"]
 	autovacuumMaxWorkers, availableMem, err := conf.getWorkMemRelatedValues(logger, &autovacuumWorkMem)
 	if err != nil {
-		logger.LogError("Failed autovacuum_work_mem check: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed autovacuum_work_mem check: %v", err))
 		autovacuumWorkMem.GotError = true
 		return nil, err
 	}
@@ -566,7 +566,7 @@ func (conf *Configuration) CheckAutovacuumWorkMem(logger *utils.Logger) (*Resour
 
 	suggestionAsMB, err := utils.ConvertBasedOnUnit(utils.Uint64ToString(suggestionRounded), autovacuumWorkMem.Unit, "MB")
 	if err != nil {
-		logger.LogError("Failed autovacuum_work_mem check: " + err.Error())
+		logger.LogError(fmt.Errorf("Failed autovacuum_work_mem check: %v", err))
 		autovacuumWorkMem.GotError = true
 		return nil, err
 	}
@@ -574,7 +574,7 @@ func (conf *Configuration) CheckAutovacuumWorkMem(logger *utils.Logger) (*Resour
 	if suggestionAsMB < 64 && autovacuumWorkMem.Value != "-1" {
 		defaultAsUnit, err := utils.ConvertBasedOnUnit("64", "MB", autovacuumWorkMem.Unit)
 		if err != nil {
-			logger.LogError("Failed autovacuum_work_mem check: " + err.Error())
+			logger.LogError(fmt.Errorf("Failed autovacuum_work_mem check: %v", err))
 			autovacuumWorkMem.GotError = true
 			return nil, err
 		}
@@ -595,13 +595,13 @@ func (conf *Configuration) getWorkMemRelatedValues(logger *utils.Logger, setting
 	// 1. Get autovacuum_max_workers
 	tmpMaxWorkers, err := conf.getSpecificPGSetting("autovacuum_max_workers", logger)
 	if err != nil {
-		logger.LogError("failed getting autovacuum_max_workers: " + err.Error())
+		logger.LogError(fmt.Errorf("failed getting autovacuum_max_workers: %v", err))
 		tmpMaxWorkers.GotError = true
 		return 0, 0, err
 	}
 	autovacuumMaxWorkers, err := utils.StringToFloat32(tmpMaxWorkers.Value)
 	if err != nil {
-		logger.LogError("failed getting autovacuum_max_workers: " + err.Error())
+		logger.LogError(fmt.Errorf("failed getting autovacuum_max_workers: %v", err))
 		tmpMaxWorkers.GotError = true
 		return 0, 0, err
 	}
@@ -609,14 +609,14 @@ func (conf *Configuration) getWorkMemRelatedValues(logger *utils.Logger, setting
 	// 1. Get available memory on server
 	availableMemory, err := utils.GetAvailableMemory()
 	if err != nil {
-		logger.LogError("failed getting available memory on server check: " + err.Error())
+		logger.LogError(fmt.Errorf("failed getting available memory on server check: %v", err))
 		tmpMaxWorkers.GotError = true
 		return 0, 0, err
 	}
 	availableMemoryAsString := utils.Uint64ToString(availableMemory)
 	availableMemoryConverted, err := utils.ConvertBasedOnUnit(availableMemoryAsString, "B", setting.Unit)
 	if err != nil {
-		logger.LogError("failed getting available memory on server check: " + err.Error())
+		logger.LogError(fmt.Errorf("failed getting available memory on server check: %v", err))
 		tmpMaxWorkers.GotError = true
 		return 0, 0, err
 	}
@@ -630,14 +630,14 @@ func (conf *Configuration) ChecklogicalDecodingWorkMem(logger *utils.Logger) (*R
 	// 1. Get available memory on server
 	availableMemory, err := utils.GetAvailableMemory()
 	if err != nil {
-		logger.LogError("failed logical_decoding_work_mem check: " + err.Error())
+		logger.LogError(fmt.Errorf("failed logical_decoding_work_mem check: %v", err))
 		logicalDecodingWorkMem.GotError = true
 		return nil, err
 	}
 	availableMemoryAsString := utils.Uint64ToString(availableMemory)
 	availableMemoryConverted, err := utils.ConvertBasedOnUnit(availableMemoryAsString, "B", logicalDecodingWorkMem.Unit)
 	if err != nil {
-		logger.LogError("failed logical_decoding_work_mem check: " + err.Error())
+		logger.LogError(fmt.Errorf("failed logical_decoding_work_mem check: %v", err))
 		logicalDecodingWorkMem.GotError = true
 		return nil, err
 	}
@@ -649,7 +649,7 @@ func (conf *Configuration) ChecklogicalDecodingWorkMem(logger *utils.Logger) (*R
 	// 3. If suggested value is less than 64MB, make no suggestion
 	suggestionAsMB, err := utils.ConvertBasedOnUnit(utils.Uint64ToString(suggestionRounded), logicalDecodingWorkMem.Unit, "MB")
 	if err != nil {
-		logger.LogError("failed logicalDecodingWorkMem check: " + err.Error())
+		logger.LogError(fmt.Errorf("failed logicalDecodingWorkMem check: %v", err))
 		logicalDecodingWorkMem.GotError = true
 		return nil, err
 	}
@@ -669,7 +669,7 @@ func (conf *Configuration) CheckMaxStackDepth(logger *utils.Logger) (*ResourceSe
 	// 1. Get system stack depth
 	systemStackDepth, err := utils.GetStackSize()
 	if err != nil {
-		logger.LogError("failed max_stack_depth check: " + err.Error())
+		logger.LogError(fmt.Errorf("failed max_stack_depth check: %v", err))
 		maxStackDepth.GotError = true
 		return nil, err
 	}
@@ -677,14 +677,14 @@ func (conf *Configuration) CheckMaxStackDepth(logger *utils.Logger) (*ResourceSe
 	// 2. System set stack depth is not equal to max_stack_depth, suggest system stack depth
 	systemStackDepthAsUnit, err := utils.ConvertBasedOnUnit(utils.Uint64ToString(systemStackDepth), "B", maxStackDepth.Unit)
 	if err != nil {
-		logger.LogError("failed max_stack_depth check: " + err.Error())
+		logger.LogError(fmt.Errorf("failed max_stack_depth check: %v", err))
 		maxStackDepth.GotError = true
 		return nil, err
 	}
 
 	maxStackDepthFloat32, err := utils.StringToFloat32(maxStackDepth.Value)
 	if err != nil {
-		logger.LogError("failed max_stack_depth check: " + err.Error())
+		logger.LogError(fmt.Errorf("failed max_stack_depth check: %v", err))
 		maxStackDepth.GotError = true
 		return nil, err
 	}
@@ -706,7 +706,7 @@ func (conf *Configuration) CheckSharedMemoryType(logger *utils.Logger) (*Resourc
 	details := "sysv option is discouraged because it typically requires non-default kernel settings to allow for large allocations"
 	err := suggestDefault(&sharedMemoryType, details)
 	if err != nil {
-		logger.LogError("failed shared_memory_type check: " + err.Error())
+		logger.LogError(fmt.Errorf("failed shared_memory_type check: %v", err))
 		sharedMemoryType.GotError = true
 		return nil, err
 	}
@@ -722,7 +722,7 @@ func (conf *Configuration) CheckDynamicSharedMemoryType(logger *utils.Logger) (*
 	details := "Typically default value is best for this option"
 	err := suggestDefault(&dynamicSharedMemoryType, details)
 	if err != nil {
-		logger.LogError("failed dynamic_shared_memory_type check: " + err.Error())
+		logger.LogError(fmt.Errorf("failed dynamic_shared_memory_type check: %v", err))
 		dynamicSharedMemoryType.GotError = true
 		return nil, err
 	}
@@ -762,27 +762,16 @@ func suggestDefault(setting *ResourceSetting, details string) error {
 }
 
 ////////////////////////////////////////////////////////////////////
-// Below are functions used to apply suggestions
+// Below are functions used or reset suggestions
 ////////////////////////////////////////////////////////////////////
 
 // Set suggested parameter in postgresql.auto.conf. ALTER SYSTEM SET does not setting a specific unit.
 func (conf *Configuration) setSuggestion(db *sql.DB, paramName string, paramValue string, logger *utils.Logger) error {
 	_, err := db.Exec(fmt.Sprintf("ALTER SYSTEM SET %s = '%s'", paramName, paramValue))
 	if err != nil {
-		logger.LogError(fmt.Sprintf("failed to apply suggestion for %s: %s", paramName, err.Error()))
-		return err
+		logger.LogError(fmt.Errorf("failed to apply suggestion for %s: %v", paramName, err))
 	}
-	return nil
-}
-
-// Reloads postgresql.conf and postgresql.auto.conf
-func (conf *Configuration) reloadConfiguration(db *sql.DB, logger *utils.Logger) error {
-	_, err := db.Exec("SELECT pg_reload_conf()")
-	if err != nil {
-		logger.LogError(fmt.Sprintf("failed to reload configuration: %s", err.Error()))
-		return err
-	}
-	return nil
+	return err
 }
 
 /*
@@ -805,7 +794,7 @@ func (conf *Configuration) ApplySuggestions(suggestions *PatchResourceConfigsJSO
 		}
 	}
 	// 3. Reload the configuration file to apply the changes
-	conf.reloadConfiguration(conf.dbHandler, logger)
+	utils.ReloadConfiguration(conf.dbHandler, logger)
 
 	if gotError {
 		return fmt.Errorf("One or more suggestion could not be applied")
@@ -813,26 +802,15 @@ func (conf *Configuration) ApplySuggestions(suggestions *PatchResourceConfigsJSO
 	return nil
 }
 
-/*
-@path - path to the backup file
-*/
-func RestoreBackup(path string, logger *utils.Logger) error {
-	panic("not implemented yet")
-}
+// Removes all content inside postgresql.auto.conf and reloads configuration
+func (conf *Configuration) DiscardConfigs(logger *utils.Logger) error {
+	// 1. Wipe postgresql.auto.conf content
+	_, err := conf.dbHandler.Exec("ALTER SYSTEM RESET ALL")
+	if err != nil {
+		logger.LogError(fmt.Errorf("failed to reset postgresql.auto.conf content: %v", err))
+	}
 
-// File for resetting all postgresql.auto.conf configurations. Essentially resets to default
-// before any configs were applied
-func ResetAutoConf() {
-	// RESET ALL
-	panic("not implemented yet")
-}
-
-// Removes all backups of postgresql.auto.conf
-func RemoveAutoConfBackups() {
-	panic("not implemented yet")
-}
-
-// Removes backup of postgresql.auto.conf
-func RemoveAutoConfBackup() {
-	panic("not implemented yet")
+	// 2. Reload configuration files
+	err = utils.ReloadConfiguration(conf.dbHandler, logger)
+	return err
 }

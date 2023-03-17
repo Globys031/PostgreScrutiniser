@@ -14,6 +14,7 @@ var (
 	tlsKeyFilePath  = flag.String("tls_key_file", "../../misc/localhost.key", "Path to the private key file.")
 	appUsername     = "postgrescrutiniser"
 	hostname        = "localhost"
+	backupDir       = "/usr/local/postgrescrutiniser/backups"
 )
 
 func main() {
@@ -32,7 +33,7 @@ func main() {
 		Gid:      appUserGid,
 	}
 	if err != nil {
-		logger.LogError("Could not find our main application user: " + err.Error())
+		logger.LogError(fmt.Errorf("Could not find our main application user:  %v", err))
 		return
 	}
 
@@ -44,7 +45,7 @@ func main() {
 		Gid:      postgreGid,
 	}
 	if err != nil {
-		logger.LogError("Could not find main PostgreSql user: " + err.Error())
+		logger.LogError(fmt.Errorf("Could not find main PostgreSql user:  %v", err))
 		return
 	}
 
@@ -74,17 +75,17 @@ func main() {
 
 	// //////////////////////////
 	// // Initialise webserver and routes
-	router := web.RegisterRoutes(dbHandler, appUser, postgresUser, logger)
+	router := web.RegisterRoutes(dbHandler, appUser, postgresUser, backupDir, logger)
 
 	// router := web.RegisterRoutes(authSvc)
 	Addr := ":8080"
 	if *enableTls {
 		if err := router.RunTLS(Addr, *tlsCertFilePath, *tlsKeyFilePath); err != nil {
-			fmt.Errorf("failed starting http2 backend server: %v", err)
+			logger.LogFatal(fmt.Errorf("failed starting http2 backend server: %v", err))
 		}
 	} else {
 		if err := router.Run(Addr); err != nil {
-			fmt.Errorf("failed starting http backend server: %v", err)
+			logger.LogFatal(fmt.Errorf("failed starting http backend server: %v", err))
 		}
 	}
 }

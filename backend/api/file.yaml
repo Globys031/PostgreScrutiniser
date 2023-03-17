@@ -1,0 +1,188 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: File Difference API
+paths:
+  /backup:
+    get:
+      description: get all postgresql.auto.conf backup files
+      operationId: getBackups
+      responses:
+        '202':
+          description: success response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupFile'
+        '500':
+          description: Server side error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+    delete:
+      description: removes all postgresql.auto.conf backup files
+      operationId: deleteBackups
+      responses:
+        '204':
+          description: success response
+        '500':
+          description: Server side error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+  /backup/{backup_name}:
+    put:
+      description: restores backup file specified by parameter
+      operationId: putBackup
+      parameters:
+        - name: backup_name
+          in: path
+          description: file name of the backup to be restored
+          required: true
+          schema:
+            type: string
+            # does not work with current version of oapi-codegen for some reason:
+            pattern: ^postgresql.auto.conf_[0-9]{10}$
+      responses:
+        '205':
+          description: file was successfully restored
+        '400':
+          description: Invalid parameter format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '500':
+          description: Server side error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+    delete:
+      description: delete a specific postgresql.auto.conf backup file
+      operationId: deleteBackup
+      parameters:
+        - name: backup_name
+          in: path
+          description: Name of the backup file to delete
+          required: true
+          schema:
+            type: string
+            pattern: ^postgresql.auto.conf_[0-9]{10}$
+      responses:
+        '204':
+          description: success response
+        '500':
+          description: Server side error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+  /file-diff/{backup_name}:
+    get:
+      description: get difference between current postgresql.auto.conf file and a backup file
+      operationId: getFileDiff
+      parameters:
+        - name: backup_name
+          in: path
+          description: Name of the backup file to diff against
+          required: true
+          schema:
+            type: string
+            pattern: '^postgresql.auto.conf_[0-9]{10}$'
+      responses:
+        '200':
+          description: success response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileDiffResponse'
+        '400':
+          description: Invalid parameter format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '500':
+          description: Server side error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+components:
+  schemas:
+    FileDiffResponse:
+      type: object
+      properties:
+        filename:
+          type: string
+          description: the name of the file being compared
+          # x-oapi-codegen-extra-tags:
+          #   validate: gte=0
+        time:
+          type: string
+          format: date-time
+          description: timestamp for when the backup file was created
+        diff:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileDiffLine'
+    FileDiffLine:
+      type: object
+      properties:
+        line:
+          type: string
+          description: line that is compared between two files
+        type:
+          type: string
+          enum: [Equal, Insert, Delete]
+          description: specifies whether line has been added, removed or unchanged
+    BackupFile:
+      type: object
+      properties:
+        name:
+          type: string
+          description: name of the backup file
+        time:
+          type: string
+          format: date-time
+          description: timestamp for when the backup file was created
+    ErrorMessage:
+      type: object
+      required:
+        - error_message
+      properties:
+        error_message:
+          type: string
