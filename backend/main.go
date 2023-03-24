@@ -6,12 +6,13 @@ import (
 
 	"github.com/Globys031/PostgreScrutiniser/backend/utils"
 	"github.com/Globys031/PostgreScrutiniser/backend/web"
+	"github.com/Globys031/PostgreScrutiniser/backend/web/auth"
 )
 
 var (
 	enableTls       = flag.Bool("enable_tls", false, "Use TLS - required for HTTP2.")
-	tlsCertFilePath = flag.String("tls_cert_file", "../../misc/localhost.crt", "Path to the CRT/PEM file.")
-	tlsKeyFilePath  = flag.String("tls_key_file", "../../misc/localhost.key", "Path to the private key file.")
+	tlsCertFilePath = flag.String("tls_cert_file", "/usr/local/postgrescrutiniser/conf/scrutiniser.crt", "Path to the CRT/PEM file.")
+	tlsKeyFilePath  = flag.String("tls_key_file", "/usr/local/postgrescrutiniser/conf/scrutiniser.key", "Path to the private key file.")
 	appUsername     = "postgrescrutiniser"
 	hostname        = "localhost"
 	backupDir       = "/usr/local/postgrescrutiniser/backups"
@@ -37,7 +38,7 @@ func main() {
 		return
 	}
 
-	_, port, _, postgreUsername, password, _ := utils.ParsePgpassFile(appUser, logger)
+	_, postgrePort, _, postgreUsername, password, _ := utils.ParsePgpassFile(appUser, logger)
 	postgreUid, postgreGid, err := utils.GetUserIds(postgreUsername, logger)
 	postgresUser := &utils.User{
 		Username: postgreUsername,
@@ -51,37 +52,29 @@ func main() {
 
 	////////////////////////
 	// Initialise database connection
-	dbHandler, _ := utils.InitDbConnection(hostname, postgresUser.Username, password, port, logger)
+	dbHandler, _ := utils.InitDbConnection(hostname, postgresUser.Username, password, postgrePort, logger)
 
 	//////////////////////////
 	// Loads configs
-	// config, err := LoadConfig()
-	// if err != nil {
-	// 	log.Fatalln("Failed at config", err)
-	// }
-	// port := config.Backend_port
-	// host := config.Backend_host
+	config, _ := LoadConfig(logger)
+	appPort := config.Backend_port
+
+	jwt := &auth.JwtWrapper{
+		SecretKey:       config.JWT_secret_key,
+		Issuer:          "postgre-scrutiniser",
+		ExpirationHours: 4, // token expires after 4 hours
+	}
 	//////////////////////////
 
-	// jwt := auth.JwtWrapper{
-	// 	SecretKey:       config.JWT_secret_key,
-	// 	Issuer:          "go-grpc-auth-svc",
-	// 	ExpirationHours: 24 * 365,
-	// }
-	// authSvc := &routes.AuthService{
-	// 	// Handler: db_handler,
-	// 	Jwt: jwt,
-	// }
-
-	// //////////////////////////
-	// // Initialise webserver and routes
-	router := web.RegisterRoutes(dbHandler, appUser, postgresUser, backupDir, logger)
+	//////////////////////////
+	// Initialise webserver and routes
+	router := web.RegisterRoutes(jwt, dbHandler, appUser, postgresUser, backupDir, logger)
 
 	// router := web.RegisterRoutes(authSvc)
-	Addr := ":8080"
+	Addr := fmt.Sprintf(":%d", appPort)
 	if *enableTls {
 		if err := router.RunTLS(Addr, *tlsCertFilePath, *tlsKeyFilePath); err != nil {
-			logger.LogFatal(fmt.Errorf("failed starting http2 backend server: %v", err))
+			logger.LogFatal(fmt.Errorf("failed starting https backend server: %v", err))
 		}
 	} else {
 		if err := router.Run(Addr); err != nil {

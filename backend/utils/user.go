@@ -10,6 +10,7 @@ import (
 
 type User struct {
 	Username string
+	Password string
 	Uid      int
 	Gid      int
 }

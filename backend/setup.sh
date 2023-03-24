@@ -8,6 +8,7 @@ echo "Beginning setup for PostgreScrutiniser.\n"
 
 APPUSER="postgrescrutiniser"
 HOMEDIR="/usr/local/$APPUSER/"
+
 useradd -m -d $HOMEDIR $APPUSER
 
 echo "What is the name of the main PostgreSql database user?"

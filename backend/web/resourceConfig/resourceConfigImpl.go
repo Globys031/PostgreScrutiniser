@@ -29,6 +29,10 @@ type ResourceConfigImpl struct {
 }
 
 func (impl *ResourceConfigImpl) GetResourceConfigs(c *gin.Context) {
+	if len(c.Errors) > 0 || c.Writer.Status() >= 400 {
+		return
+	}
+
 	// Reuse the same variable that contains resource setting details
 	if impl.Configuration == nil {
 		impl.Configuration = InitChecks(impl.DbHandler, impl.AppUser, impl.PostgresUser, impl.Logger)
@@ -48,6 +52,10 @@ func (impl *ResourceConfigImpl) GetResourceConfigs(c *gin.Context) {
 }
 
 func (impl *ResourceConfigImpl) GetResourceConfigById(c *gin.Context, config GetResourceConfigByIdParamsConfig) {
+	if len(c.Errors) > 0 || c.Writer.Status() >= 400 {
+		return
+	}
+
 	// Reuse the same reference that contains resource setting details
 	if impl.Configuration == nil {
 		impl.Configuration = InitChecks(impl.DbHandler, impl.AppUser, impl.PostgresUser, impl.Logger)
@@ -102,6 +110,10 @@ func (impl *ResourceConfigImpl) GetResourceConfigById(c *gin.Context, config Get
 
 // Accepts a request body containing an array of suggestions
 func (impl *ResourceConfigImpl) PatchResourceConfigs(c *gin.Context) {
+	if len(c.Errors) > 0 || c.Writer.Status() >= 400 {
+		return
+	}
+
 	// Bind post body and validate
 	suggestions := PatchResourceConfigsJSONBody{}
 	if err := c.BindJSON(&suggestions); err != nil {
@@ -135,6 +147,10 @@ func (impl *ResourceConfigImpl) PatchResourceConfigs(c *gin.Context) {
 }
 
 func (impl *ResourceConfigImpl) DeleteResourceConfigs(c *gin.Context) {
+	if len(c.Errors) > 0 || c.Writer.Status() >= 400 {
+		return
+	}
+
 	if err := impl.Configuration.DiscardConfigs(impl.Logger); err != nil {
 		errorMsg := &ErrorMessage{
 			ErrorMessage: err.Error(),

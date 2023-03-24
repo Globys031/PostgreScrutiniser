@@ -43,6 +43,12 @@ func (impl *FileImpl) validateBackup(c *gin.Context, backupName string) error {
 
 // Lists all backups
 func (impl *FileImpl) GetBackups(c *gin.Context) {
+	// Due to how `oapi-codegen` generates code, we have to manually
+	// exit at each endpoint if middleware aborted
+	if len(c.Errors) > 0 || c.Writer.Status() >= 400 {
+		return
+	}
+
 	data, err := ListBackups(impl.BackupDir, impl.Logger)
 	if err != nil {
 		errorMsg := &ErrorMessage{
@@ -66,6 +72,10 @@ func (impl *FileImpl) GetBackups(c *gin.Context) {
 
 // Replaces current postgresql.auto.conf file with backup file and reloads configuration
 func (impl *FileImpl) PutBackup(c *gin.Context, backupName string) {
+	if len(c.Errors) > 0 || c.Writer.Status() >= 400 {
+		return
+	}
+
 	// 1. Validate parameter fits regex
 	err := impl.validateBackup(c, backupName)
 	if err != nil {
@@ -84,6 +94,10 @@ func (impl *FileImpl) PutBackup(c *gin.Context, backupName string) {
 }
 
 func (impl *FileImpl) DeleteBackups(c *gin.Context) {
+	if len(c.Errors) > 0 || c.Writer.Status() >= 400 {
+		return
+	}
+
 	if err := RemoveBackups(impl.BackupDir, impl.Logger); err != nil {
 		errorMsg := &ErrorMessage{
 			ErrorMessage: err.Error(),
@@ -94,6 +108,10 @@ func (impl *FileImpl) DeleteBackups(c *gin.Context) {
 }
 
 func (impl *FileImpl) DeleteBackup(c *gin.Context, backupName string) {
+	if len(c.Errors) > 0 || c.Writer.Status() >= 400 {
+		return
+	}
+
 	// 1. Validate parameter fits regex
 	err := impl.validateBackup(c, backupName)
 	if err != nil {
@@ -113,6 +131,10 @@ func (impl *FileImpl) DeleteBackup(c *gin.Context, backupName string) {
 
 // Gets comparison for specific backup file
 func (impl *FileImpl) GetFileDiff(c *gin.Context, backupName string) {
+	if len(c.Errors) > 0 || c.Writer.Status() >= 400 {
+		return
+	}
+
 	// 1. Validate parameter fits regex
 	err := impl.validateBackup(c, backupName)
 	if err != nil {

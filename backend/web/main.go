@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/Globys031/PostgreScrutiniser/backend/utils"
+	"github.com/Globys031/PostgreScrutiniser/backend/web/auth"
 	"github.com/Globys031/PostgreScrutiniser/backend/web/file"
 	"github.com/Globys031/PostgreScrutiniser/backend/web/resourceConfig"
 	"github.com/gin-contrib/cors"
@@ -15,13 +16,8 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// type AuthService struct {
-// 	Handler db.Handler
-// 	Jwt     auth.JwtWrapper
-// }
-
 // func RegisterRoutes(svc *AuthService) *gin.Engine {
-func RegisterRoutes(dbHandler *sql.DB, appUser *utils.User, postgresUser *utils.User, backupDir string, logger *utils.Logger) *gin.Engine {
+func RegisterRoutes(jwt *auth.JwtWrapper, dbHandler *sql.DB, appUser *utils.User, postgresUser *utils.User, backupDir string, logger *utils.Logger) *gin.Engine {
 	////////////////////////
 	// Route configurations
 	router := gin.Default()
@@ -32,19 +28,33 @@ func RegisterRoutes(dbHandler *sql.DB, appUser *utils.User, postgresUser *utils.
 	// TO DO: Consider changing this later
 	router.Use(cors.New(config))
 
-	// ////////////////////////
-	// // Register custom validators
+	////////////////////////
+	// Register custom validators
 	validate := validator.New()
 	validate.RegisterValidation(`backup`, utils.ValidateAutoConfBackup)
+	validate.RegisterValidation(`username`, utils.ValidateUsername)
 
 	////////////////////////
 	// Register routes
 
-	// TO DO: add middleware for authentification somewhere here
+	optionsAuthConfig := &auth.GinServerOptions{
+		BaseURL: "/api",
+	}
+	authConfigApi := &auth.AuthImpl{
+		Jwt:      jwt,
+		Logger:   logger,
+		Validate: validate,
+	}
+	auth.RegisterHandlersWithOptions(router, authConfigApi, *optionsAuthConfig)
+
+	//////////////////////////////////////////////////////////
+
+	// All routes below use middleware for authentication
 	optionsResourceConfig := &resourceConfig.GinServerOptions{
 		BaseURL: "/api",
-		// Middlewares  []MiddlewareFunc
-		// ErrorHandler func(*gin.Context, error, int)
+		Middlewares: []resourceConfig.MiddlewareFunc{
+			resourceConfig.MiddlewareFunc(jwt.ValidateTokenMiddleware(logger)),
+		},
 	}
 
 	resourceConfigApi := &resourceConfig.ResourceConfigImpl{
@@ -59,6 +69,9 @@ func RegisterRoutes(dbHandler *sql.DB, appUser *utils.User, postgresUser *utils.
 
 	optionsFile := &file.GinServerOptions{
 		BaseURL: "/api",
+		Middlewares: []file.MiddlewareFunc{
+			file.MiddlewareFunc(jwt.ValidateTokenMiddleware(logger)),
+		},
 	}
 
 	configFilePath, _ := utils.FindConfigFile(logger)

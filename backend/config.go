@@ -1,13 +1,18 @@
 package main
 
-import "github.com/spf13/viper"
+import (
+	"fmt"
+
+	"github.com/Globys031/PostgreScrutiniser/backend/utils"
+	"github.com/spf13/viper"
+)
 
 type Config struct {
-	Port  string `mapstructure:"PORT"`
-	DBUrl string `mapstructure:"DB_URL"`
+	JWT_secret_key string `mapstructure:"JWT_SECRET_KEY"`
+	Backend_port   int    `mapstructure:"BACKEND_PORT"`
 }
 
-func LoadConfig() (c Config, err error) {
+func LoadConfig(logger *utils.Logger) (c Config, err error) {
 	viper.AddConfigPath(".")
 	viper.SetConfigName("dev")
 	viper.SetConfigType("env")
@@ -15,12 +20,14 @@ func LoadConfig() (c Config, err error) {
 	viper.AutomaticEnv()
 
 	err = viper.ReadInConfig()
-
 	if err != nil {
+		logger.LogFatal(fmt.Errorf("Could not load .env file configs: %v", err))
 		return
 	}
-
 	err = viper.Unmarshal(&c)
+	if err != nil {
+		logger.LogFatal(fmt.Errorf("Could not unmarshal .env file configs: %v", err))
+	}
 
 	return
 }
