@@ -21,6 +21,7 @@ After `oapi-codegen` was used to generate API endpoints,
 `ServerInterface` can be used to add our actual implementation
 */
 type ResourceConfigImpl struct {
+	ConfigFile    string
 	AppUser       *utils.User
 	PostgresUser  *utils.User
 	Logger        *utils.Logger
@@ -35,7 +36,7 @@ func (impl *ResourceConfigImpl) GetResourceConfigs(c *gin.Context) {
 
 	// Reuse the same variable that contains resource setting details
 	if impl.Configuration == nil {
-		impl.Configuration = InitChecks(impl.DbHandler, impl.AppUser, impl.PostgresUser, impl.Logger)
+		impl.Configuration = InitChecks(impl.ConfigFile, impl.DbHandler, impl.AppUser, impl.PostgresUser, impl.Logger)
 	}
 
 	data := RunChecks(impl.Configuration, impl.Logger)
@@ -58,7 +59,7 @@ func (impl *ResourceConfigImpl) GetResourceConfigById(c *gin.Context, config Get
 
 	// Reuse the same reference that contains resource setting details
 	if impl.Configuration == nil {
-		impl.Configuration = InitChecks(impl.DbHandler, impl.AppUser, impl.PostgresUser, impl.Logger)
+		impl.Configuration = InitChecks(impl.ConfigFile, impl.DbHandler, impl.AppUser, impl.PostgresUser, impl.Logger)
 	}
 
 	var configData *ResourceSetting
@@ -133,7 +134,7 @@ func (impl *ResourceConfigImpl) PatchResourceConfigs(c *gin.Context) {
 
 	// Reuse the same reference that contains resource setting details
 	if impl.Configuration == nil {
-		impl.Configuration = InitChecks(impl.DbHandler, impl.AppUser, impl.PostgresUser, impl.Logger)
+		impl.Configuration = InitChecks(impl.ConfigFile, impl.DbHandler, impl.AppUser, impl.PostgresUser, impl.Logger)
 	}
 
 	err := impl.Configuration.ApplySuggestions(&suggestions, impl.Logger)

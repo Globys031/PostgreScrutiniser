@@ -2,14 +2,11 @@ package utils
 
 import (
 	"bufio"
-	"bytes"
 	"database/sql"
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/user"
-	"regexp"
 	"strings"
 
 	_ "github.com/lib/pq"
@@ -78,33 +75,19 @@ func CloseDbConnection(dbHandler *sql.DB, logger *Logger) error {
 
 // TO DO: Rewrite with gorm
 // Returns path to postgresql.conf if it exists.
-func FindConfigFile(logger *Logger) (string, error) {
-	output, err := exec.Command("psql", "-w", "-U", "postgres", "-c", "SHOW config_file").Output()
+func FindConfigFile(dbHandler *sql.DB, logger *Logger) (string, error) {
+	row := dbHandler.QueryRow("SHOW config_file")
 
+	var filePath string
+	err := row.Scan(&filePath)
 	if err != nil {
 		logger.LogError(fmt.Errorf("Failed finding postgresql.conf: %v", err))
 		return "", err
 	}
 
-	var filePath string
-	scanner := bufio.NewScanner(bytes.NewReader(output))
-	// Return line that has postgresql.conf in it
-	for scanner.Scan() {
-		line := scanner.Text()
-		if match, _ := regexp.MatchString("postgresql.conf", line); match {
-			filePath = strings.TrimSpace(line)
-			break
-		}
-	}
-
 	// check to confirm postgresql.conf file exists
 	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
-		err = fmt.Errorf("postgresql.conf was found with `psql -U` but could not be opened: %v", err)
-		logger.LogError(fmt.Errorf("Failed finding postgresql.conf: %v", err))
-		return "", err
-	}
-
-	if err := scanner.Err(); err != nil {
+		err = fmt.Errorf("postgresql.conf was found with `SHOW config_file` but could not be opened: %v", err)
 		logger.LogError(fmt.Errorf("Failed finding postgresql.conf: %v", err))
 		return "", err
 	}

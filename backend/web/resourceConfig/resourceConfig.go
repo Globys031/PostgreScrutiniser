@@ -43,8 +43,7 @@ type Configuration struct {
 
 // Meant for initialising Configuration upon first api call so that same
 // reference can be reused for later calls.
-func InitChecks(dbHandler *sql.DB, appUser *utils.User, postgresUser *utils.User, logger *utils.Logger) *Configuration {
-	configFilePath, _ := utils.FindConfigFile(logger)
+func InitChecks(configFilePath string, dbHandler *sql.DB, appUser *utils.User, postgresUser *utils.User, logger *utils.Logger) *Configuration {
 	ResourceSettings, _ := getPGSettings(dbHandler, logger)
 	autoConfPath := filepath.Dir(configFilePath) + "/postgresql.auto.conf"
 	backupDir := "/usr/local/postgrescrutiniser/backups"

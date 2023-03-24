@@ -37,6 +37,9 @@ func RegisterRoutes(jwt *auth.JwtWrapper, dbHandler *sql.DB, appUser *utils.User
 	////////////////////////
 	// Register routes
 
+	// Config file path used for multiple route groups
+	configFilePath, _ := utils.FindConfigFile(dbHandler, logger)
+
 	optionsAuthConfig := &auth.GinServerOptions{
 		BaseURL: "/api",
 	}
@@ -58,6 +61,7 @@ func RegisterRoutes(jwt *auth.JwtWrapper, dbHandler *sql.DB, appUser *utils.User
 	}
 
 	resourceConfigApi := &resourceConfig.ResourceConfigImpl{
+		ConfigFile:   configFilePath,
 		Logger:       logger,
 		AppUser:      appUser,
 		PostgresUser: postgresUser,
@@ -74,7 +78,6 @@ func RegisterRoutes(jwt *auth.JwtWrapper, dbHandler *sql.DB, appUser *utils.User
 		},
 	}
 
-	configFilePath, _ := utils.FindConfigFile(logger)
 	fileApi := &file.FileImpl{
 		BackupDir:        backupDir,
 		CurrentFile:      filepath.Dir(configFilePath) + "/postgresql.auto.conf",
