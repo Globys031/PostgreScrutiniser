@@ -15,7 +15,9 @@ echo $SCRUTINISER_PASSWORD | passwd --stdin $APPUSER
 useradd -m -d $HOMEDIR $APPUSER
 
 echo "postgrescrutiniser  ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
 echo "Main application user $APPUSER created with password: $SCRUTINISER_PASSWORD"
+echo "These credentials should be used to connect to our application"
 
 # Save postgres database's main user's credentials into a .pgpass file
 echo "What is the name of the main PostgreSql database user?"

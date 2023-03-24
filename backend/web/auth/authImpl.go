@@ -10,7 +10,6 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// TO DO: add a validator that would check if passed username is system username
 type AuthImpl struct {
 	Jwt      *JwtWrapper
 	Logger   *utils.Logger
@@ -46,7 +45,14 @@ func (impl *AuthImpl) PostLogin(c *gin.Context) {
 	}
 
 	// 3. Check if password is correct
-	// TO DO: add code here
+	if correctPassword := utils.PasswordMatches(*loginData.Name, *loginData.Password, impl.Logger); !correctPassword {
+		err := fmt.Errorf("Incorrect user password")
+		errorMsg := &ErrorMessage{
+			ErrorMessage: err.Error(),
+		}
+		c.JSON(http.StatusBadRequest, &errorMsg)
+		return
+	}
 
 	// 3. Generate JWT token
 	token, err := impl.Jwt.GenerateToken(loginData, impl.Logger)
