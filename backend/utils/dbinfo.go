@@ -73,7 +73,6 @@ func CloseDbConnection(dbHandler *sql.DB, logger *Logger) error {
 	return nil
 }
 
-// TO DO: Rewrite with gorm
 // Returns path to postgresql.conf if it exists.
 func FindConfigFile(dbHandler *sql.DB, logger *Logger) (string, error) {
 	row := dbHandler.QueryRow("SHOW config_file")

@@ -33,7 +33,7 @@ then
 fi
 
 echo "*:$PORT:*:$POSTGREUSER:$PASSWORD" > $HOMEDIR/.pgpass
-chown $APPUSER $HOMEDIR/.pgpass
+chown -R $APPUSER. $HOMEDIR
 chmod 0600 $HOMEDIR/.pgpass
 
 echo "Main PostgreSql database's user credentials saved in: $HOMEDIR/.pgpass"
