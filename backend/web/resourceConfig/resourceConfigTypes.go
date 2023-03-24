@@ -36,12 +36,6 @@ type ResourceConfig struct {
 	// GotError specifies whether check got an error
 	GotError *bool `json:"got_error,omitempty"`
 
-	// MaxVal Maximum allowed value (needed for validation)
-	MaxVal *string `json:"max_val,omitempty"`
-
-	// MinVal Minimum allowed value (needed for validation)
-	MinVal *string `json:"min_val,omitempty"`
-
 	// Name Name of the setting
 	Name *string `json:"name,omitempty"`
 
@@ -56,9 +50,6 @@ type ResourceConfig struct {
 
 	// Value Value of the setting
 	Value *string `json:"value,omitempty"`
-
-	// Vartype Type of the value (boolean, integer, enum, etc.)
-	Vartype *string `json:"vartype,omitempty"`
 }
 
 // ResourceConfigPatchSchema defines model for resourceConfigPatchSchema.

@@ -16,34 +16,15 @@ import (
 	"github.com/Globys031/PostgreScrutiniser/backend/utils"
 )
 
-// TO DO:
-// also return documentation for every setting (probably best to do on the frontend side actually)
-
-/* TO DO:
-Add somewhere in the GUI a prompt that:
-1. This app assumes that block_size is the default value of 8192 bytes as defined by `block_size` and described here: https://pgpedia.info/b/block_size.html#:~:text=The%20default%20value%20for%20block_size,(PostgreSQL%208.4%20and%20later).
-2. This app assumes that all integer type settings have unit values specified
-*/
-
 type ResourceSetting struct {
-	// TO DO: consider removing minVal, maxVal, vartype
 	Name     string // name of the setting
 	Value    string // value of the setting
-	Vartype  string // what type value is (boolean, integer, enum, etc...)
 	Unit     string // s, ms, kB, 8kB, etc...
-	MinVal   string // Minimum allowed value (needed for validation)
-	MaxVal   string // Maximum allowed value (needed for validation)
 	EnumVals string // If an enumrator, this stores enum values. For internal use only. Not exposted by API
 
 	SuggestedValue string // Value that will be suggested after running check
 	Details        string // Details informing why a value was suggested
-	// Specifies if applying suggestion requires rebooting postgresql server
-	// If set to false, but a SuggestedValue has been applied, will do
-	// `pg_ctl reload` automatically
-	// https://www.postgresql.org/docs/15/app-pg-ctl.html
-	// TO DO: check to confirm docs are referring to restarting postgresql, not the server itself
-	RequiresRestart bool
-	GotError        bool // specifies whether check got an error
+	GotError       bool   // specifies whether check got an error
 }
 
 type Configuration struct {
@@ -109,7 +90,7 @@ func getPGSettings(dbHandler *sql.DB, logger *utils.Logger) (map[string]Resource
 		"dynamic_shared_memory_type"}
 
 	// Prepare the SQL statement
-	stmt, err := dbHandler.Prepare("SELECT name,setting,vartype,unit,min_val,max_val,enumvals FROM pg_settings")
+	stmt, err := dbHandler.Prepare("SELECT name,setting,unit,enumvals FROM pg_settings")
 	if err != nil {
 		logger.LogError(fmt.Errorf("Failed preparing SQL statement: %v", err))
 		return nil, err
@@ -129,8 +110,8 @@ func getPGSettings(dbHandler *sql.DB, logger *utils.Logger) (map[string]Resource
 
 	// Use rows.Next() to read the output row by row
 	for rows.Next() {
-		var name, setting, vartype, unit, minVal, maxVal, EnumVals sql.NullString
-		if err := rows.Scan(&name, &setting, &vartype, &unit, &minVal, &maxVal, &EnumVals); err != nil {
+		var name, setting, unit, EnumVals sql.NullString
+		if err := rows.Scan(&name, &setting, &unit, &EnumVals); err != nil {
 			logger.LogError(fmt.Errorf("Failed scanning row: %v", err))
 			return nil, err
 		}
@@ -143,10 +124,7 @@ func getPGSettings(dbHandler *sql.DB, logger *utils.Logger) (map[string]Resource
 				resSetting := ResourceSetting{
 					Name:     name.String,     // name of the setting
 					Value:    setting.String,  // value of the setting
-					Vartype:  vartype.String,  // what type value is (boolean, integer, enum, etc...)
 					Unit:     unit.String,     // s, ms, kB, 8kB, etc...
-					MinVal:   minVal.String,   // Minimum allowed value (needed for validation)
-					MaxVal:   maxVal.String,   // Maximum allowed value (needed for validation)
 					EnumVals: EnumVals.String, // If an enumrator, this stores enum values
 				}
 
@@ -161,7 +139,7 @@ func getPGSettings(dbHandler *sql.DB, logger *utils.Logger) (map[string]Resource
 
 func (conf *Configuration) getSpecificPGSetting(settingName string, logger *utils.Logger) (*ResourceSetting, error) {
 	// Prepare the SQL statement
-	formattedArg := fmt.Sprintf("SELECT name,setting,vartype,unit,min_val,max_val,enumvals FROM pg_settings WHERE name = '%s'", settingName)
+	formattedArg := fmt.Sprintf("SELECT name,setting,unit,enumvals FROM pg_settings WHERE name = '%s'", settingName)
 	stmt, err := conf.dbHandler.Prepare(formattedArg)
 	if err != nil {
 		logger.LogError(fmt.Errorf("Failed preparing SQL statement: %v", err))
@@ -179,18 +157,15 @@ func (conf *Configuration) getSpecificPGSetting(settingName string, logger *util
 
 	// Read and return first resulting row
 	rows.Next()
-	var name, setting, vartype, unit, minVal, maxVal, EnumVals sql.NullString
-	if err := rows.Scan(&name, &setting, &vartype, &unit, &minVal, &maxVal, &EnumVals); err != nil {
+	var name, setting, unit, EnumVals sql.NullString
+	if err := rows.Scan(&name, &setting, &unit, &EnumVals); err != nil {
 		logger.LogError(fmt.Errorf("Failed scanning row: %v", err))
 		return nil, err
 	}
 	resSetting := ResourceSetting{
 		Name:     name.String,     // name of the setting
 		Value:    setting.String,  // value of the setting
-		Vartype:  vartype.String,  // what type value is (boolean, integer, enum, etc...)
 		Unit:     unit.String,     // s, ms, kB, 8kB, etc...
-		MinVal:   minVal.String,   // Minimum allowed value (needed for validation)
-		MaxVal:   maxVal.String,   // Maximum allowed value (needed for validation)
 		EnumVals: EnumVals.String, // If an enumrator, this stores enum values
 	}
 
@@ -289,9 +264,6 @@ func (conf *Configuration) CheckSharedBuffers(logger *utils.Logger) (*ResourceSe
 	// Round suggestion to power of 2 and make sure there's no decimal point
 	roundedSuggestion := utils.RoundToPowerOf2(uint64(suggestion))
 	sharedBuffers.SuggestedValue = utils.Uint64ToString(roundedSuggestion)
-	// https://www.postgresql.org/docs/current/runtime-config-resource.html
-	// "This parameter can only be set at server start."
-	sharedBuffers.RequiresRestart = true
 	conf.settings["shared_buffers"] = sharedBuffers
 	return &sharedBuffers, err
 }
@@ -358,7 +330,6 @@ func (conf *Configuration) CheckHugePageSize(logger *utils.Logger) (*ResourceSet
 		hugePageSize.Details = "Current huge_page_size value is set to a non 0 value. To prevent fragmentation, the same huge page size as the one set in your Linux kernel should be used. When set to 0, the default huge page size on the system will be used."
 	}
 
-	hugePageSize.RequiresRestart = true
 	conf.settings["huge_page_size"] = hugePageSize
 	return &hugePageSize, nil
 }
@@ -416,7 +387,6 @@ func (conf *Configuration) CheckMaxPreparedTransactions(logger *utils.Logger) (*
 		maxPreparedTransactions.SuggestedValue = maxConnections.Value
 	}
 
-	maxPreparedTransactions.RequiresRestart = true
 	conf.settings["max_prepared_transactions"] = maxPreparedTransactions
 	return &maxPreparedTransactions, nil
 }
@@ -482,7 +452,6 @@ func (conf *Configuration) CheckHashMemMultiplier(logger *utils.Logger) (*Resour
 		hashMemMultiplier.Details = "Generally default value works best. If your application uses hash-based operations and PostgreSQL often ends up spilling (creates workfiles on disk to compensate for lack of memory), consider increasing this further. Suggested value is based on how much working memory is currently set."
 		hashMemMultiplier.SuggestedValue = utils.Float32ToString(suggestion)
 	} else if hashMemMultiplier.Value != "2" {
-		fmt.Println("ieina")
 		hashMemMultiplier.Details = "Generally default value works best. If your application uses hash-based operations and PostgreSQL often ends up spilling (creates workfiles on disk to compensate for lack of memory), consider increasing this after having increased work_mem above 40MB."
 		hashMemMultiplier.SuggestedValue = "2"
 	}
@@ -765,7 +734,7 @@ func suggestDefault(setting *ResourceSetting, details string) error {
 // Below are functions used or reset suggestions
 ////////////////////////////////////////////////////////////////////
 
-// Set suggested parameter in postgresql.auto.conf. ALTER SYSTEM SET does not setting a specific unit.
+// Set suggested parameter in postgresql.auto.conf. ALTER SYSTEM SET cannot specify a unit.
 func (conf *Configuration) setSuggestion(db *sql.DB, paramName string, paramValue string, logger *utils.Logger) error {
 	_, err := db.Exec(fmt.Sprintf("ALTER SYSTEM SET %s = '%s'", paramName, paramValue))
 	if err != nil {

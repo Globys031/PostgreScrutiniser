@@ -125,18 +125,9 @@ components:
         value:
           type: string
           description: Value of the setting
-        vartype:
-          type: string
-          description: Type of the value (boolean, integer, enum, etc.)
         unit:
           type: string
           description: Unit of measurement (s, ms, kB, 8kB, etc.)
-        min_val:
-          type: string
-          description: Minimum allowed value (needed for validation)
-        max_val:
-          type: string
-          description: Maximum allowed value (needed for validation)
         enum_vals:
           type: string
           description: specifies what type of values setting could have
@@ -156,20 +147,14 @@ components:
       # TO DO: use an actual config as an example instead of `setting1`
         - name: setting1
           value: true
-          vartype: boolean
           unit: null
-          min_Val: null
-          max_Val: null
           suggested_value: null
           details: null
           requires_Restart: false
           got_error: true
         - name: setting2
           value: 100
-          vartype: integer
           unit: ms
-          min_val: 0
-          max_val: 1000
           suggested_value: 500
           details: "Recommended value for better performance"
           requires_restart: true

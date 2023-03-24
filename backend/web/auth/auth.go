@@ -44,7 +44,6 @@ func (wrapper *JwtWrapper) GenerateToken(user LoginRequest, logger *utils.Logger
 }
 
 func (wrapper *JwtWrapper) ValidateToken(signedToken string, logger *utils.Logger) (claims *JwtClaims, err error) {
-	fmt.Println("signedToken: ", signedToken)
 	// 1. Validate token
 	token, err := jwt.ParseWithClaims(
 		signedToken,
