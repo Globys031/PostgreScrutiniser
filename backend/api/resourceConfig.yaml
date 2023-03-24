@@ -86,6 +86,7 @@ paths:
           in: path
           description: name of resource config to get
           required: true
+          example: "shared_buffers"
           schema:
             type: string
             enum: ["autovacuum_work_mem", "dynamic_shared_memory_type", "hash_mem_multiplier", "huge_page_size", "huge_pages", "maintenance_work_mem", "max_prepared_transactions", "max_stack_depth", "shared_buffers", "shared_memory_type", "temp_buffers", "work_mem", "logical_decoding_work_mem"]
@@ -144,20 +145,20 @@ components:
           type: boolean
           description: specifies whether check got an error
       example:
-      # TO DO: use an actual config as an example instead of `setting1`
-        - name: setting1
-          value: true
-          unit: null
-          suggested_value: null
-          details: null
-          requires_Restart: false
-          got_error: true
-        - name: setting2
-          value: 100
-          unit: ms
-          suggested_value: 500
-          details: "Recommended value for better performance"
-          requires_restart: true
+        - name: "autovacuum_work_mem"
+          value: "-1"
+          unit: "kB"
+          enum_vals: ""
+          suggested_value: "131072"
+          details: "This suggestion was made by dividing current available memory(2236112.00kB) by 4 and by how many autovacuum_max_workers(3) are set"
+          got_error: false
+        - name: "huge_pages"
+          value: "off"
+          unit: ""
+          enum_vals: "{off,on,try}"
+          suggested_value: "off"
+          details: "Kernel parameter nr_hugepages is set to 0. Because of that, PostgreSQL cannot request huge pages"
+          got_error: false
     resourceConfigPatchSchema:
       type: object
       required: 
@@ -171,9 +172,10 @@ components:
           type: string
           description: Value that will be suggested after running check
       example:
-      # TO DO: use an actual config as an example instead of `setting1`
-        - name: setting1
-          suggested_value: 1000
+        - name: "autovacuum_work_mem"
+          suggested_value: "10000"
+        - name: "huge_pages"
+          suggested_value: "off"
     ErrorMessage:
       type: object
       required:
