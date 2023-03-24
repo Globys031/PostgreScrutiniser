@@ -11,8 +11,8 @@ import (
 
 var (
 	enableTls       = flag.Bool("enable_tls", false, "Use TLS - required for HTTP2.")
-	tlsCertFilePath = flag.String("tls_cert_file", "/usr/local/postgrescrutiniser/conf/scrutiniser.crt", "Path to the CRT/PEM file.")
-	tlsKeyFilePath  = flag.String("tls_key_file", "/usr/local/postgrescrutiniser/conf/scrutiniser.key", "Path to the private key file.")
+	tlsCertFilePath = flag.String("tls_cert_file", "/usr/local/postgrescrutiniser/confs/scrutiniser.crt", "Path to the CRT/PEM file.")
+	tlsKeyFilePath  = flag.String("tls_key_file", "/usr/local/postgrescrutiniser/confs/scrutiniser.key", "Path to the private key file.")
 	appUsername     = "postgrescrutiniser"
 	hostname        = "localhost"
 	backupDir       = "/usr/local/postgrescrutiniser/backups"
