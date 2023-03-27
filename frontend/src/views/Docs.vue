@@ -26,6 +26,7 @@ const urls = [
 // function for merging multiple openapi specifiations
 function mergeSpecs(specs: Array<openapiSpec>) {
   const mergedSpec = {
+    servers: [{ url: `http://${import.meta.env.VITE_BACKEND_HOST}/api` }],
     components: {
       schemas: {},
     },
