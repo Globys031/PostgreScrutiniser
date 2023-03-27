@@ -1,41 +1,62 @@
 <template>
-  <div class="sidebar" :class="{ open: isOpen, }">
+  <div class="sidebar" :class="{ open: isOpen }">
     <div class="logo-details">
-      <img class="icon" alt="logo" src="@/assets/mini-logo.svg" width="50" height="50" />
+      <img
+        class="icon"
+        alt="logo"
+        src="@/assets/mini-logo.svg"
+        width="50"
+        height="50"
+      />
       <span class="logo_name">PostgreScrutiniser</span>
       <span class="svg-box">
-        <IconBxMenu id="btn" v-if="!isOpen" @click=toggleCloseButton() />
-        <IconBxMenuAltRight id="btn" v-else @click=toggleCloseButton() />
+        <IconBxMenu id="btn" v-if="!isOpen" @click="toggleCloseButton()" />
+        <IconBxMenuAltRight id="btn" v-else @click="toggleCloseButton()" />
       </span>
     </div>
     <ul class="nav-list">
       <li>
-        <a href="#">
+        <RouterLink class="links_name" to="/">
           <span class="svg-box">
-            <IconBxGridAlt />
+            <IconBxHome />
+          </span>
+          <span class="links_name">Home</span>
+        </RouterLink>
+        <span class="tooltip">Home</span>
+      </li>
+
+      <li>
+        <RouterLink class="links_name" to="/">
+          <span class="svg-box">
+            <IconBxRun />
           </span>
           <span class="links_name">Runtime Configurations</span>
-        </a>
-        <span class="tooltip">Dashboard</span>
+        </RouterLink>
+        <span class="tooltip">Runtime Configurations</span>
       </li>
+
       <li>
-        <a href="#">
+        <RouterLink class="links_name" to="/">
           <span class="svg-box">
-            <IconBxUser />
+            <!--  TO DO: use this icon for restoration button instead -->
+            <!-- <IconBxRotateLeft /> -->
+            <IconBxFolder />
           </span>
-          <span class="links_name">Placholder</span>
-        </a>
-        <span class="tooltip">Placholder</span>
+          <span class="links_name">Configuration Backups</span>
+        </RouterLink>
+        <span class="tooltip">Configuration Backups</span>
       </li>
+
       <li>
-        <a href="#">
+        <RouterLink class="links_name" to="/docs">
           <span class="svg-box">
-            <IconBxUser />
+            <IconBxReceipt />
           </span>
-          <span class="links_name">Placholder</span>
-        </a>
-        <span class="tooltip">Placholder</span>
+          <span class="links_name">API Documentation</span>
+        </RouterLink>
+        <span class="tooltip">API Documentation</span>
       </li>
+
       <li class="profile">
         <div class="profile-details">
           <div class>
@@ -50,28 +71,39 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { IconBxMenu, IconBxMenuAltRight, IconBxGridAlt, IconBxUser, IconBxLogOut } from '@iconify-prerendered/vue-bx';
+import { ref } from "vue";
+import {
+  IconBxHome,
+  IconBxMenu,
+  IconBxMenuAltRight,
+  IconBxGridAlt,
+  IconBxUser,
+  IconBxLogOut,
+  IconBxRun,
+  IconBxRotateLeft,
+  IconBxFolder,
+  IconBxReceipt,
+} from "@iconify-prerendered/vue-bx";
 
-const isOpen = ref<boolean>(false)
+const isOpen = ref<boolean>(false);
 
 function toggleCloseButton() {
-  isOpen.value = !isOpen.value
+  isOpen.value = !isOpen.value;
 }
 
 function logout() {
-  console.log('Logout not implemented yet');
+  console.log("Logout not implemented yet");
 }
 
 // function for truncating hostname if it's too long
 function truncateText() {
-  console.log('truncateText not implemented yet');
+  console.log("truncateText not implemented yet");
 }
 </script>
 
 <style scoped>
 /* Google Font Link */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap");
 
 * {
   margin: 0;
@@ -122,7 +154,6 @@ function truncateText() {
   opacity: 0;
   transition: all 0.5s ease;
 }
-
 
 .sidebar.open .logo-details .icon,
 .sidebar.open .logo-details .logo_name {
@@ -194,7 +225,7 @@ function truncateText() {
 }
 
 .sidebar li a:hover {
-  background: #FFF;
+  background: #fff;
 }
 
 .sidebar li a .links_name {
@@ -220,7 +251,7 @@ function truncateText() {
 .sidebar li .tooltip,
 .sidebar li a:hover svg {
   transition: all 0.5s ease;
-  color: #11101D;
+  color: #11101d;
 }
 
 .sidebar .svg-box {

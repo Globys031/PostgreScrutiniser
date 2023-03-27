@@ -6,6 +6,8 @@ paths:
   /login:
     post:
       description: login as our application's system user (postgrescrutiniser)
+      tags:
+        - auth
       operationId: postLogin
       requestBody:
         required: true

@@ -16,6 +16,7 @@
   "dependencies": {
     "@iconify-prerendered/vue-bx": "^0.21.1663655035",
     "pinia": "^2.0.28",
+    "swagger-ui": "^4.18.1",
     "vue": "^3.2.45",
     "vue-router": "^4.1.6"
   },

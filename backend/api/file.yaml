@@ -6,6 +6,8 @@ paths:
   /backup:
     get:
       description: get all postgresql.auto.conf backup files
+      tags:
+        - backup
       operationId: getBackups
       responses:
         '202':
@@ -28,6 +30,8 @@ paths:
                 $ref: '#/components/schemas/ErrorMessage'
     delete:
       description: removes all postgresql.auto.conf backup files
+      tags:
+        - backup
       operationId: deleteBackups
       responses:
         '204':
@@ -47,6 +51,8 @@ paths:
   /backup/{backup_name}:
     put:
       description: restores backup file specified by parameter
+      tags:
+        - backup
       operationId: putBackup
       parameters:
         - name: backup_name
@@ -81,6 +87,8 @@ paths:
                 $ref: '#/components/schemas/ErrorMessage'
     delete:
       description: delete a specific postgresql.auto.conf backup file
+      tags:
+        - backup
       operationId: deleteBackup
       parameters:
         - name: backup_name
@@ -109,6 +117,8 @@ paths:
   /file-diff/{backup_name}:
     get:
       description: get difference between current postgresql.auto.conf file and a backup file
+      tags:
+        - file-diff
       operationId: getFileDiff
       parameters:
         - name: backup_name
