@@ -1,5 +1,10 @@
 import { createRouter, createWebHistory } from "vue-router";
 import HomeView from "../views/Home.vue";
+import LoginView from "../views/Login.vue";
+
+import { useSessionStore } from "../stores/session";
+
+// const sessionStore = useSessionStore();
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -8,6 +13,7 @@ const router = createRouter({
       path: "/",
       name: "home",
       component: HomeView,
+      meta: { requiresAuth: false },
     },
     {
       path: "/about",
@@ -16,13 +22,27 @@ const router = createRouter({
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
       component: () => import("../views/About.vue"),
+      meta: { requiresAuth: false },
     },
     {
       path: "/docs",
       name: "docs",
       component: () => import("../views/Docs.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/login",
+      name: "login",
+      component: LoginView,
+      meta: { requiresAuth: false },
     },
   ],
+});
+
+router.beforeEach((to) => {
+  const sessionStore = useSessionStore();
+  if (to.meta.requiresAuth && !sessionStore.token) return "/login";
+  if (sessionStore.token && to.name == "login") return "/";
 });
 
 export default router;

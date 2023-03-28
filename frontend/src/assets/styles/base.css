@@ -3,7 +3,7 @@
   --vt-primary-font: #ffffff;
   --vt-primary-background: #00203F;
 
-  /* Vuejs default css: */
+  /* Vuejs default css (remove later if deemed unnecessary): */
   --vt-c-white: #ffffff;
   --vt-c-white-soft: #f8f8f8;
   --vt-c-white-mute: #f2f2f2;
@@ -23,6 +23,19 @@
   --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
   --vt-c-text-dark-1: var(--vt-c-white);
   --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
+
+  /* CSS added by me */
+  --vt-success-color: #155531;
+  --vt-error-color: #9B2C2C;
+  --vt-success-background: #98e698;
+  --vt-error-background: #FEE2E2;
+
+  --vt-button: #3ca9e2;
+  --vt-button-hover: #329dd5;
+  --vt-button-danger: #b30000;
+  --vt-button-danger-hover: #990000;
+  --vt-button-success: #29a329;
+  --vt-button-success-hover: #248f24;
 }
 
 /* semantic color variables for this project */
@@ -38,6 +51,17 @@
 
   --color-heading: var(--vt-c-text-light-1);
   --color-text: var(--vt-c-text-light-1);
+
+  /* CSS added by me */
+  --color-success-background: var(--vt-success-background);
+  --color-error-background: var(--vt-error-background);
+
+  --color-button: var(--vt-button);
+  --color-button-hover: var(--vt-button-hover);
+  --color-button-danger: var(--vt-button-danger);
+  --color-button-danger-hover: var(--vt-button-danger-hover);
+  --color-button-success: var(--vt-button-success);
+  --color-button-success-hover: var(--vt-button-success-hover);
 
   --section-gap: 160px;
 }
