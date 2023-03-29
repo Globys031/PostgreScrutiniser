@@ -44,18 +44,12 @@
 import { ref } from "vue";
 import axios from "axios";
 import { useSessionStore } from "../stores/session";
-import { AuthApiFp } from "../openapi/auth/api";
-import { Configuration } from "../openapi/auth/configuration";
+import { AuthApiFp } from "../openapi/api/auth";
 
-import type { ErrorMessage } from "../openapi/auth/api";
+import type { ErrorMessage } from "../openapi/api/auth";
 
 const sessionStore = useSessionStore();
-
-const postLogin = AuthApiFp(
-  new Configuration({
-    basePath: "http://192.168.56.102:9090/api",
-  })
-).postLogin;
+const postLogin = AuthApiFp().postLogin;
 
 const username = ref<string>("");
 const password = ref<string>("");
@@ -246,7 +240,6 @@ input[type="password"]:valid ~ .validation span:last-child {
 input[type="submit"] {
   border: none;
   display: block;
-  /* background-color: #3ca9e2; */
   background-color: var(--color-button);
   color: #fff;
   font-weight: bold;
@@ -261,8 +254,6 @@ input[type="submit"] {
   text-align: center;
 }
 input[type="submit"]:hover {
-  /* background-color: #329dd5; */
-  /* background-color: #329dd5; */
   background-color: var(--vt-button-hover);
   -webkit-transition: all 0.2s ease;
   transition: all 0.2s ease;

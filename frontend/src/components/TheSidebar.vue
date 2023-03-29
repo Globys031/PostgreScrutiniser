@@ -26,7 +26,7 @@
       </li>
 
       <li>
-        <RouterLink class="links_name" to="/">
+        <RouterLink class="links_name" to="/configurations">
           <span class="svg-box">
             <IconBxRun />
           </span>
@@ -36,7 +36,7 @@
       </li>
 
       <li>
-        <RouterLink class="links_name" to="/">
+        <RouterLink class="links_name" to="/backups">
           <span class="svg-box">
             <!--  TO DO: use this icon for restoration button instead -->
             <!-- <IconBxRotateLeft /> -->

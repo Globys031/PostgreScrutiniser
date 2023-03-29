@@ -4,8 +4,6 @@ import LoginView from "../views/Login.vue";
 
 import { useSessionStore } from "../stores/session";
 
-// const sessionStore = useSessionStore();
-
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -13,6 +11,12 @@ const router = createRouter({
       path: "/",
       name: "home",
       component: HomeView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/login",
+      name: "login",
+      component: LoginView,
       meta: { requiresAuth: false },
     },
     {
@@ -22,7 +26,7 @@ const router = createRouter({
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
       component: () => import("../views/About.vue"),
-      meta: { requiresAuth: false },
+      meta: { requiresAuth: true },
     },
     {
       path: "/docs",
@@ -31,10 +35,16 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: "/login",
-      name: "login",
-      component: LoginView,
-      meta: { requiresAuth: false },
+      path: "/configurations",
+      name: "configurations",
+      component: () => import("../views/RuntimeConfigs.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/backups",
+      name: "backups",
+      component: () => import("../views/ConfigBackups.vue"),
+      meta: { requiresAuth: true },
     },
   ],
 });

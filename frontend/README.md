@@ -108,3 +108,4 @@ Below is a list of references used for creating the frontend side of this applic
 - https://www.codinglabweb.com/2021/04/responsive-side-navigation-bar-in-html.html
 - https://swagger.io/docs/open-source-tools/swagger-ui
 - https://openapi-generator.tech/docs/installation
+- https://codehim.com
