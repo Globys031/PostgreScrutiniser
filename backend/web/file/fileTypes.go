@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+const (
+	BearerAuthScopes = "bearerAuth.Scopes"
+)
+
 // Defines values for FileDiffLineType.
 const (
 	Delete FileDiffLineType = "Delete"

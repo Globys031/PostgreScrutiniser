@@ -8,4 +8,5 @@ export type openapiSpec = {
   };
   openapi: string;
   paths: Object;
+  security: Object;
 };

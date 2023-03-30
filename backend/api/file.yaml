@@ -16,6 +16,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BackupFile'
+        '401':
+          description: Token missing or malformed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
         '500':
           description: Server side error
           content:
@@ -36,6 +42,12 @@ paths:
       responses:
         '204':
           description: success response
+        '401':
+          description: Token missing or malformed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
         '500':
           description: Server side error
           content:
@@ -73,6 +85,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorMessage'
+        '401':
+          description: Token missing or malformed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
         '500':
           description: Server side error
           content:
@@ -102,6 +120,12 @@ paths:
       responses:
         '204':
           description: success response
+        '401':
+          description: Token missing or malformed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
         '500':
           description: Server side error
           content:
@@ -142,6 +166,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorMessage'
+        '401':
+          description: Token missing or malformed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
         '500':
           description: Server side error
           content:
@@ -155,6 +185,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorMessage'
 components:
+  # 1) Define the security scheme type (HTTP bearer)
+  securitySchemes:
+    bearerAuth:            # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT    # optional, arbitrary value for documentation purposes
   schemas:
     FileDiffResponse:
       type: object
@@ -209,3 +245,6 @@ components:
       properties:
         error_message:
           type: string
+# 2) Apply the security globally to all operations
+security:
+  - bearerAuth: []         # use the same name as above

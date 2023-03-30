@@ -39,6 +39,8 @@ type MiddlewareFunc func(c *gin.Context)
 // DeleteResourceConfigs operation middleware
 func (siw *ServerInterfaceWrapper) DeleteResourceConfigs(c *gin.Context) {
 
+	c.Set(BearerAuthScopes, []string{""})
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 	}
@@ -49,6 +51,8 @@ func (siw *ServerInterfaceWrapper) DeleteResourceConfigs(c *gin.Context) {
 // GetResourceConfigs operation middleware
 func (siw *ServerInterfaceWrapper) GetResourceConfigs(c *gin.Context) {
 
+	c.Set(BearerAuthScopes, []string{""})
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 	}
@@ -58,6 +62,8 @@ func (siw *ServerInterfaceWrapper) GetResourceConfigs(c *gin.Context) {
 
 // PatchResourceConfigs operation middleware
 func (siw *ServerInterfaceWrapper) PatchResourceConfigs(c *gin.Context) {
+
+	c.Set(BearerAuthScopes, []string{""})
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
@@ -79,6 +85,8 @@ func (siw *ServerInterfaceWrapper) GetResourceConfigById(c *gin.Context) {
 		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter config: %s", err), http.StatusBadRequest)
 		return
 	}
+
+	c.Set(BearerAuthScopes, []string{""})
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)

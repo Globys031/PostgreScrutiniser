@@ -91,7 +91,8 @@ func (wrapper *JwtWrapper) ValidateTokenMiddleware(logger *utils.Logger) Middlew
 		}
 
 		// If the token is valid, set the claims in the request context and continue
-		c.Set("jwtClaims", claims)
+		// c.Set("jwtClaims", claims)
+		c.Set("bearerAuth.Scopes", claims)
 		c.Next()
 	}
 }

@@ -23,6 +23,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/resourceConfig'
+        '401':
+          description: Token missing or malformed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
         '500':
           description: Server side error
           content:
@@ -57,6 +63,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorMessage'
+        '401':
+          description: Token missing or malformed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
         default:
           description: unexpected error
           content:
@@ -71,6 +83,12 @@ paths:
       responses:
         '205':
           description: success response
+        '401':
+          description: Token missing or malformed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
         '500':
           description: Server side error
           content:
@@ -111,6 +129,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorMessage'
+        '401':
+          description: Token missing or malformed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
         '500':
           description: Server side error
           content:
@@ -124,6 +148,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorMessage'
 components:
+  # 1) Define the security scheme type (HTTP bearer)
+  securitySchemes:
+    bearerAuth:            # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT    # optional, arbitrary value for documentation purposes
   schemas:
     resourceConfig:
       type: object
@@ -191,3 +221,6 @@ components:
       properties:
         error_message:
           type: string
+# 2) Apply the security globally to all operations
+security:
+  - bearerAuth: []         # use the same name as above

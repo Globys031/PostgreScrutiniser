@@ -42,6 +42,8 @@ type MiddlewareFunc func(c *gin.Context)
 // DeleteBackups operation middleware
 func (siw *ServerInterfaceWrapper) DeleteBackups(c *gin.Context) {
 
+	c.Set(BearerAuthScopes, []string{""})
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 	}
@@ -51,6 +53,8 @@ func (siw *ServerInterfaceWrapper) DeleteBackups(c *gin.Context) {
 
 // GetBackups operation middleware
 func (siw *ServerInterfaceWrapper) GetBackups(c *gin.Context) {
+
+	c.Set(BearerAuthScopes, []string{""})
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
@@ -73,6 +77,8 @@ func (siw *ServerInterfaceWrapper) DeleteBackup(c *gin.Context) {
 		return
 	}
 
+	c.Set(BearerAuthScopes, []string{""})
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 	}
@@ -94,6 +100,8 @@ func (siw *ServerInterfaceWrapper) PutBackup(c *gin.Context) {
 		return
 	}
 
+	c.Set(BearerAuthScopes, []string{""})
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 	}
@@ -114,6 +122,8 @@ func (siw *ServerInterfaceWrapper) GetFileDiff(c *gin.Context) {
 		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter backup_name: %s", err), http.StatusBadRequest)
 		return
 	}
+
+	c.Set(BearerAuthScopes, []string{""})
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
