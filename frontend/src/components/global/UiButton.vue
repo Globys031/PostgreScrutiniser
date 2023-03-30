@@ -1,22 +1,62 @@
 <template>
-  <vButton />
+  <component :is="vButtonComponent" />
 </template>
 
 <script setup lang="ts">
-import { h, useCssModule } from "vue";
+import { h, useCssModule, computed } from "vue";
 import {
   IconBxUndo,
   IconBxInfoCircle,
   IconBxError,
   IconBxSend,
 } from "@iconify-prerendered/vue-bx";
-
-const styles = useCssModule();
+import type { VNode, VNodeArrayChildren } from "vue";
 
 const props = defineProps<{
   type: string; // undo/error/submit/info
   text: string; // text inside the button
 }>();
+
+const styles = useCssModule();
+
+// ... Create a virtual node button
+type VButtonType = ReturnType<typeof createVButton>;
+const vButton: VButtonType = createVButton();
+
+if (isVNodeArrayChildren(vButton.children)) {
+  switch (props.type) {
+    case "submit":
+      ((vButton.children as VNode[])[0].children as VNode[]).push(
+        h(IconBxSend)
+      );
+      break;
+    case "warning":
+      ((vButton.children as VNode[])[0].children as VNode[]).push(
+        h(IconBxError)
+      );
+      break;
+    case "info":
+      ((vButton.children as VNode[])[0].children as VNode[]).push(
+        h(IconBxInfoCircle)
+      );
+      break;
+    case "undo":
+      ((vButton.children as VNode[])[0].children as VNode[]).push(
+        h(IconBxUndo)
+      );
+      break;
+    default:
+      console.error("Wrong button type submitted");
+  }
+}
+
+// Using a computed render function instead of calling `vButton`
+// directly to avoid typescript errors
+const vButtonComponent = computed(() => ({
+  render() {
+    return vButton;
+  },
+}));
 
 /* Create a dynamic vNode button based on props.
 Equivalent to:
@@ -29,32 +69,24 @@ Equivalent to:
   </button>
 ```
 */
-const vButton = h(
-  "button",
-  {
-    class: [styles.btn, styles[`btn-${props.type}`]],
-  },
-  [
-    h("div", { class: styles["icon-container"] }, []),
-    h("div", { class: styles["text-container"] }, [props.text]),
-  ]
-);
+function createVButton() {
+  return h(
+    "button",
+    {
+      class: [styles.btn, styles[`btn-${props.type}`]],
+    },
+    [
+      h("div", { class: styles["icon-container"] }, []),
+      h("div", { class: styles["text-container"] }, [props.text]),
+    ]
+  );
+}
 
-switch (props.type) {
-  case "submit":
-    vButton.children[0].children.push(h(IconBxSend));
-    break;
-  case "warning":
-    vButton.children[0].children.push(h(IconBxError));
-    break;
-  case "info":
-    vButton.children[0].children.push(h(IconBxInfoCircle));
-    break;
-  case "undo":
-    vButton.children[0].children.push(h(IconBxUndo));
-    break;
-  default:
-    console.error("Wrong button type submitted");
+// Define a type guard for VNodeArrayChildren
+function isVNodeArrayChildren(
+  children: unknown
+): children is VNodeArrayChildren {
+  return Array.isArray(children);
 }
 </script>
 
