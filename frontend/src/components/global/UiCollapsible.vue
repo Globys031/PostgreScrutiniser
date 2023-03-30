@@ -74,6 +74,10 @@ function resizeContentMaxHeight(childSize: string) {
 .content {
   max-height: 0;
   overflow: hidden;
+
+  /* force content to not disappear when viewport too small */
+  min-width: 100px;
+
   box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
   transition: max-height 0.2s ease-out;
   background-color: #f1f1f1;
@@ -89,5 +93,13 @@ function resizeContentMaxHeight(childSize: string) {
 
 .text.active:after {
   content: "\2212";
+}
+
+/* Temporary hack to force header and content to resize at the same rate */
+@media screen and (max-width: 414px) {
+  .header,
+  .content {
+    width: 100%;
+  }
 }
 </style>
