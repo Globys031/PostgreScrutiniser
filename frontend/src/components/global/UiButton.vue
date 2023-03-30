@@ -23,53 +23,42 @@ const styles = useCssModule();
 type VButtonType = ReturnType<typeof createVButton>;
 const vButton: VButtonType = createVButton();
 
-if (isVNodeArrayChildren(vButton.children)) {
+const vButtonChildren = (vButton.children as VNode[])[0];
+
+if (isVNodeArrayChildren(vButtonChildren.children)) {
   switch (props.type) {
     case "submit":
-      ((vButton.children as VNode[])[0].children as VNode[]).push(
-        h(IconBxSend)
-      );
+      vButtonChildren.children.push(h(IconBxSend));
       break;
     case "warning":
-      ((vButton.children as VNode[])[0].children as VNode[]).push(
-        h(IconBxError)
-      );
+      vButtonChildren.children.push(h(IconBxError));
       break;
     case "info":
-      ((vButton.children as VNode[])[0].children as VNode[]).push(
-        h(IconBxInfoCircle)
-      );
+      vButtonChildren.children.push(h(IconBxInfoCircle));
       break;
     case "undo":
-      ((vButton.children as VNode[])[0].children as VNode[]).push(
-        h(IconBxUndo)
-      );
+      vButtonChildren.children.push(h(IconBxUndo));
       break;
     default:
       console.error("Wrong button type submitted");
   }
 }
 
-// Using a computed render function instead of calling `vButton`
+// Using a computed ref instead of calling `vButton` 
 // directly to avoid typescript errors
-const vButtonComponent = computed(() => ({
-  render() {
-    return vButton;
-  },
-}));
+const vButtonComponent = computed(() => vButton);
 
-/* Create a dynamic vNode button based on props.
-Equivalent to:
-```
+// Create a dynamic vNode button based on props.
+function createVButton() {
+  /* Equivalent to:
+  ```
   <button class="btn btn-warning btn-sep">
     <div class="icon-container">
       <IconBxUndo />
     </div>
     <div class="text-container">Test</div>
   </button>
-```
-*/
-function createVButton() {
+  ``` */
   return h(
     "button",
     {
