@@ -86,7 +86,7 @@ function addNotification() {
     notificationContainer.value.addNotification(
       "success",
       "Operation successful",
-      "New notification",
+      "New notificationnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
       3000
     );
 

@@ -59,12 +59,13 @@ function closeNotification() {
   cursor: pointer;
   display: flex;
   margin-bottom: 1em;
-  min-width: 300px;
+  min-width: 250px;
   bottom: 20px;
   right: 20px;
   border-radius: 5px;
   color: white;
   cursor: pointer;
+  max-width: 70%;
 }
 
 .notification.success {
@@ -87,6 +88,7 @@ function closeNotification() {
   padding: 15px;
   display: flex;
   flex-direction: column;
+  word-break: break-word;
 }
 
 .title {
