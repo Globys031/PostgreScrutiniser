@@ -6,7 +6,7 @@
 import SwaggerUI from "swagger-ui";
 import "swagger-ui/dist/swagger-ui.css";
 import axios from "axios";
-import type { openapiSpec } from "src/openapi/types/spec";
+import type { openapiSpec } from "@/types/spec";
 
 const urls = [
   `http://${import.meta.env.VITE_BACKEND_HOST}/api/docs/auth`,
@@ -36,10 +36,12 @@ function mergeSpecs(specs: Array<openapiSpec>) {
     },
     openapi: "3.0.0",
     paths: {},
+    security: {},
   };
   for (const spec of specs) {
     Object.assign(mergedSpec.paths, spec.paths);
     Object.assign(mergedSpec.components.schemas, spec.components.schemas);
+    Object.assign(mergedSpec.security, spec.security);
   }
 
   return mergedSpec;

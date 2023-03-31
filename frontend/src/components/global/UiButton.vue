@@ -105,8 +105,9 @@ function isVNodeArrayChildren(
   align-items: center;
   justify-content: center;
   background-color: rgba(0, 0, 0, 0.1 /* Adjust this value to change shade */);
-  padding: 20px;
+  padding: 13px;
   height: 100%;
+  font-size: 20px;
 }
 
 .text-container {

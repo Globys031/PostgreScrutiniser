@@ -38,8 +38,6 @@
       <li>
         <RouterLink class="links_name" to="/backups">
           <span class="svg-box">
-            <!--  TO DO: use this icon for restoration button instead -->
-            <!-- <IconBxRotateLeft /> -->
             <IconBxFolder />
           </span>
           <span class="links_name">Configuration Backups</span>
@@ -76,11 +74,8 @@ import {
   IconBxHome,
   IconBxMenu,
   IconBxMenuAltRight,
-  IconBxGridAlt,
-  IconBxUser,
   IconBxLogOut,
   IconBxRun,
-  IconBxRotateLeft,
   IconBxFolder,
   IconBxReceipt,
 } from "@iconify-prerendered/vue-bx";
