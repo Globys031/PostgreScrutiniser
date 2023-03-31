@@ -91,7 +91,6 @@ function isVNodeArrayChildren(
   margin-bottom: 1em;
   text-transform: uppercase;
   letter-spacing: 1px;
-  font-weight: 700;
   outline: none;
   position: relative;
   transition: all 0.3s;
@@ -111,7 +110,7 @@ function isVNodeArrayChildren(
 }
 
 .text-container {
-  padding: 25px 60px;
+  padding: 20px 15px;
 }
 
 /* Button 1 */

@@ -17,8 +17,6 @@ import { ref } from "vue";
 import UiNotification from "./UiNotification.vue";
 import type { UiNotificationType } from "@/types/notification";
 
-console.log("UiNotificationContainer setup");
-
 // Expose addNotification to be used outside of this component
 defineExpose({
   addNotification,

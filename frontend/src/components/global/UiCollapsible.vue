@@ -50,7 +50,6 @@ function resizeContentMaxHeight(childSize: string) {
   cursor: pointer;
   position: relative;
   font-size: 18px;
-  font-weight: bold;
   background-color: var(--vt-primary-background);
   color: var(--vt-c-white);
   padding: 20px 50px 20px;
@@ -80,7 +79,6 @@ function resizeContentMaxHeight(childSize: string) {
 
   box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
   transition: max-height 0.2s ease-out;
-  background-color: #f1f1f1;
 }
 
 /* ::::: */

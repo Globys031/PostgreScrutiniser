@@ -59,7 +59,6 @@ function closeNotification() {
   cursor: pointer;
   display: flex;
   margin-bottom: 1em;
-  min-width: 250px;
   bottom: 20px;
   right: 20px;
   border-radius: 5px;
