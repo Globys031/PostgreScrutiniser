@@ -676,6 +676,16 @@ func (conf *Configuration) CheckMaxStackDepth(logger *utils.Logger) (*ResourceSe
 		maxStackDepth.Details = "The ideal setting for this parameter is the actual stack size limit enforced by the kernel (as set by ulimit -s or local equivalent)."
 	}
 
+	/* For whatever reason, it's impossible to apply 8192 maxStackDepth value on the system I tested with.
+	This is in spite of the fact that it's what the PostgreSql documentation suggests (that it should ideally
+  be the same as the system stack depth) and despite the fact that it doesn't exceed max_val as returned
+	by `pg_settings`.
+	Temporary work-around is to cap it out at 4096. I think this is a bug with PostgreSql itself.
+	*/
+	if maxStackDepth.SuggestedValue > "4096" {
+		maxStackDepth.SuggestedValue = "4096"
+	}
+
 	resetSuggestionIfEqual(&maxStackDepth)
 	conf.settings["max_stack_depth"] = maxStackDepth
 	return &maxStackDepth, nil
@@ -749,8 +759,6 @@ func suggestDefault(setting *ResourceSetting, details string) error {
 // Function for setting `SuggestedValue` to an empty string if it's equal to `Value`.
 // We shouldn't make any suggestion if suggestion is equal to that of the currently set value
 func resetSuggestionIfEqual(setting *ResourceSetting) {
-	fmt.Printf("setting.Name: %s, setting.Value: %s, setting.SuggestedValue: %s\n", setting.Name, setting.Value, setting.SuggestedValue)
-
 	if setting.Value == setting.SuggestedValue {
 		setting.SuggestedValue = ""
 	}
