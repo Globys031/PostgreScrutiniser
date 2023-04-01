@@ -54,7 +54,11 @@ func InitChecks(configFilePath string, dbHandler *sql.DB, appUser *utils.User, p
 }
 
 func RunChecks(conf *Configuration, logger *utils.Logger) *map[string]ResourceSetting {
-	// Error logging is handled inside the functions
+	// Need to reload settings before every check call in case something has been
+	// changed outside our application's environment
+	conf.settings, _ = getPGSettings(conf.dbHandler, logger)
+
+	// Run checks
 	conf.CheckSharedBuffers(logger)
 	conf.CheckHugePages(logger)
 	conf.CheckHugePageSize(logger)

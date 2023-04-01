@@ -63,10 +63,19 @@ func GetDateTime(path string, logger *Logger) (*time.Time, error) {
 
 // Reloads postgresql.conf and postgresql.auto.conf
 func ReloadConfiguration(db *sql.DB, logger *Logger) error {
-	_, err := db.Exec("SELECT pg_reload_conf()")
+	// Using db.Prepare instead of db.Exec to avoid asynchronous behaviour
+	stmt, err := db.Prepare("SELECT pg_reload_conf()")
 	if err != nil {
-		logger.LogError(fmt.Errorf("failed to reload configuration: %v", err))
-		return err
+			logger.LogError(fmt.Errorf("failed to `prepare SELECT pg_reload_conf()` SQL statement: %v", err))
+			return err
 	}
+	defer stmt.Close()
+
+	_, err = stmt.Query()
+	if err != nil {
+			logger.LogError(fmt.Errorf("failed to execute `SELECT pg_reload_conf()` query: %v", err))
+			return err
+	}
+
 	return nil
 }
