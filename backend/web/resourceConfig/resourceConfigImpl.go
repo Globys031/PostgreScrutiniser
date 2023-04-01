@@ -152,6 +152,11 @@ func (impl *ResourceConfigImpl) DeleteResourceConfigs(c *gin.Context) {
 		return
 	}
 
+	// Reuse the same reference that contains resource setting details
+	if impl.Configuration == nil {
+		impl.Configuration = InitChecks(impl.ConfigFile, impl.DbHandler, impl.AppUser, impl.PostgresUser, impl.Logger)
+	}
+
 	if err := impl.Configuration.DiscardConfigs(impl.Logger); err != nil {
 		errorMsg := &ErrorMessage{
 			ErrorMessage: err.Error(),
