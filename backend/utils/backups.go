@@ -71,11 +71,12 @@ func ReloadConfiguration(db *sql.DB, logger *Logger) error {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Query()
+	rows, err := stmt.Query()
 	if err != nil {
 			logger.LogError(fmt.Errorf("failed to execute `SELECT pg_reload_conf()` query: %v", err))
 			return err
 	}
+	defer rows.Close() // Close the rows
 
 	return nil
 }
