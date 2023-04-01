@@ -35,13 +35,21 @@ function toggleCollapse() {
 // Function for resizing the maximum height based on contents inside element
 // @childSize {*} [options] Override http request option.
 // @param {childSize} - the max height of a child collapsible.
-function resizeContentMaxHeight(childSize: string) {
-  if (content.value) {
-    content.value.style.maxHeight =
-      content.value.scrollHeight + parseInt(childSize, 10) + "px";
-  } else {
-    console.error("content ref is undefined");
+// function resizeContentMaxHeight(childSize: string) {
+function resizeContentMaxHeight() {
+  if (!content.value) {
+    console.error("Content inside collapsible was null");
+    return;
   }
+  const childArray = Array.from(content.value.children);
+  const totalHeight = childArray.reduce(
+    (totalHeight, child) => totalHeight + child.scrollHeight,
+    0
+  );
+
+  content.value
+    ? (content.value.style.maxHeight = totalHeight + "px")
+    : console.error("content ref is undefined");
 }
 </script>
 

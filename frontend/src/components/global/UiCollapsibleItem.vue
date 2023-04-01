@@ -13,8 +13,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-import { toggleCollapseContent } from "../../composables/collapsible";
+import { ref, onMounted, onUnmounted } from "vue";
+import {
+  toggleCollapseContent,
+  resizeContentIfOpen,
+} from "../../composables/collapsible";
 
 const isActive = ref<Boolean>(false);
 const content = ref<HTMLElement | null>(null);
@@ -22,6 +25,30 @@ const content = ref<HTMLElement | null>(null);
 const emit = defineEmits<{
   (e: "resize", childSize: string): void;
 }>();
+
+// When `content` slot content changes, the collapsible should be resized
+// to take into account new content size
+let observer: MutationObserver;
+onMounted(() => {
+  // observer = new MutationObserver((mutations) => {
+  observer = new MutationObserver(() => {
+    // This callback will be called whenever the slot content changes
+    resizeContentIfOpen(content.value);
+  });
+
+  if (content.value) {
+    observer.observe(content.value, {
+      childList: true,
+      subtree: true,
+    });
+  }
+});
+
+onUnmounted(() => {
+  if (observer) {
+    observer.disconnect();
+  }
+});
 
 // Collapse the item itself and emit an event
 // so the parent that contains multiple items can resize itself as well

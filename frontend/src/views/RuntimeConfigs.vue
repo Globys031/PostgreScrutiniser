@@ -21,7 +21,7 @@
         <UiCollapsibleItem
           v-for="(item, index) in suggestions"
           :key="index"
-          @resize="(size: string) => setChildSize(collapsibleSuggestions, size)"
+          @resize="(size: string) => setChildSize(collapsibleSuggestions)"
         >
           <template #title>
             <span v-text="item.Name" />
@@ -67,7 +67,7 @@
         <UiCollapsibleItem
           v-for="(item, index) in passedChecks"
           :key="index"
-          @resize="(size: string) => setChildSize(collapsiblePassedChecks,size)"
+          @resize="(size: string) => setChildSize(collapsiblePassedChecks)"
         >
           <template #title>
             <span v-text="item.Name" />
@@ -187,9 +187,7 @@ async function applySuggestions(suggestions: ResourceConfigPascalCase[]) {
       "success",
       "Suggestions applied"
     );
-
-    // After patching requests, renew table (suggestion) data.
-    getSuggestions();
+    refreshChecks();
   } catch (error) {
     displayError(error);
     configChecks.value = []; // reset table to empty
@@ -203,10 +201,17 @@ async function resetConfigs() {
     await deleteRequest();
 
     // After patching requests, renew table (suggestion) data.
-    getSuggestions();
+    refreshChecks();
   } catch (error) {
     displayError(error);
   }
+}
+
+// After need configurations settings are applied, refresh settings table
+function refreshChecks() {
+  getSuggestions();
+  setChildSize(collapsibleSuggestions.value);
+  setChildSize(collapsiblePassedChecks.value);
 }
 
 function displayError(error: unknown) {
@@ -216,12 +221,9 @@ function displayError(error: unknown) {
 }
 
 // After `UiCollapsibleItem` is resized, resize `UiCollapsible` as well
-function setChildSize(
-  collapsible: UiCollapsibleComponent | null,
-  size: string
-) {
+function setChildSize(collapsible: UiCollapsibleComponent | null) {
   collapsible
-    ? collapsible.resizeContentMaxHeight(size)
+    ? collapsible.resizeContentMaxHeight()
     : console.error("collapsible component is null");
 }
 </script>
