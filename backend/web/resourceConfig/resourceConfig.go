@@ -267,6 +267,7 @@ func (conf *Configuration) CheckSharedBuffers(logger *utils.Logger) (*ResourceSe
 	// Round suggestion to power of 2 and make sure there's no decimal point
 	roundedSuggestion := utils.RoundToPowerOf2(uint64(suggestion))
 	sharedBuffers.SuggestedValue = utils.Uint64ToString(roundedSuggestion)
+	resetSuggestionIfEqual(&sharedBuffers)
 	conf.settings["shared_buffers"] = sharedBuffers
 	return &sharedBuffers, err
 }
@@ -288,6 +289,7 @@ func (conf *Configuration) CheckHugePages(logger *utils.Logger) (*ResourceSettin
 		hugePages.Details = "Kernel parameter nr_hugepages is set to 0. Because of that, PostgreSQL cannot request huge pages"
 		setEnumTypeSuggestedValue(&hugePages, "off")
 
+		resetSuggestionIfEqual(&hugePages)
 		conf.settings["huge_pages"] = hugePages
 		return &hugePages, nil
 	}
@@ -300,8 +302,8 @@ func (conf *Configuration) CheckHugePages(logger *utils.Logger) (*ResourceSettin
 		setEnumTypeSuggestedValue(&hugePages, "try")
 	}
 
+	resetSuggestionIfEqual(&hugePages)
 	// If kernelNrHugePages > 0 and hugePages.SuggestedValue = "try", make no suggestions
-
 	conf.settings["huge_pages"] = hugePages
 	return &hugePages, nil
 }
@@ -333,6 +335,7 @@ func (conf *Configuration) CheckHugePageSize(logger *utils.Logger) (*ResourceSet
 		hugePageSize.Details = "Current huge_page_size value is set to a non 0 value. To prevent fragmentation, the same huge page size as the one set in your Linux kernel should be used. When set to 0, the default huge page size on the system will be used."
 	}
 
+	resetSuggestionIfEqual(&hugePageSize)
 	conf.settings["huge_page_size"] = hugePageSize
 	return &hugePageSize, nil
 }
@@ -368,6 +371,7 @@ func (conf *Configuration) CheckTempBuffers(logger *utils.Logger) (*ResourceSett
 		tempBuffers.SuggestedValue = utils.Float32ToString(convertedDefault)
 	}
 
+	resetSuggestionIfEqual(&tempBuffers)
 	conf.settings["temp_buffers"] = tempBuffers
 	return &tempBuffers, nil
 }
@@ -390,6 +394,7 @@ func (conf *Configuration) CheckMaxPreparedTransactions(logger *utils.Logger) (*
 		maxPreparedTransactions.SuggestedValue = maxConnections.Value
 	}
 
+	resetSuggestionIfEqual(&maxPreparedTransactions)
 	conf.settings["max_prepared_transactions"] = maxPreparedTransactions
 	return &maxPreparedTransactions, nil
 }
@@ -425,6 +430,7 @@ func (conf *Configuration) CheckWorkMem(logger *utils.Logger) (*ResourceSetting,
 	// 3. Add details for decision
 	workMem.Details = "Suggested value is based on currently available memory on the server divided by max_connections. If using complex queries that involve sorts or hash tables, consider using double this value. It can also be set higher if this server is a dedicated database server and there is no concern that other software will run out of memory."
 
+	resetSuggestionIfEqual(&workMem)
 	conf.settings["work_mem"] = workMem
 	return &workMem, nil
 }
@@ -459,6 +465,7 @@ func (conf *Configuration) CheckHashMemMultiplier(logger *utils.Logger) (*Resour
 		hashMemMultiplier.SuggestedValue = "2"
 	}
 
+	resetSuggestionIfEqual(&hashMemMultiplier)
 	conf.settings["hash_mem_multiplier"] = hashMemMultiplier
 	return &hashMemMultiplier, nil
 }
@@ -512,6 +519,7 @@ func (conf *Configuration) CheckMaintenanceWorkMem(logger *utils.Logger) (*Resou
 		}
 	}
 
+	resetSuggestionIfEqual(&maintenanceWorkMem)
 	conf.settings["maintenance_work_mem"] = maintenanceWorkMem
 	return &maintenanceWorkMem, nil
 }
@@ -557,6 +565,7 @@ func (conf *Configuration) CheckAutovacuumWorkMem(logger *utils.Logger) (*Resour
 		autovacuumWorkMem.SuggestedValue = ""
 	}
 
+	resetSuggestionIfEqual(&autovacuumWorkMem)
 	conf.settings["autovacuum_work_mem"] = autovacuumWorkMem
 	return &autovacuumWorkMem, nil
 }
@@ -631,6 +640,7 @@ func (conf *Configuration) ChecklogicalDecodingWorkMem(logger *utils.Logger) (*R
 		logicalDecodingWorkMem.SuggestedValue = utils.Uint64ToString(suggestionRounded)
 	}
 
+	resetSuggestionIfEqual(&logicalDecodingWorkMem)
 	conf.settings["logical_decoding_work_mem"] = logicalDecodingWorkMem
 	return &logicalDecodingWorkMem, nil
 }
@@ -666,6 +676,7 @@ func (conf *Configuration) CheckMaxStackDepth(logger *utils.Logger) (*ResourceSe
 		maxStackDepth.Details = "The ideal setting for this parameter is the actual stack size limit enforced by the kernel (as set by ulimit -s or local equivalent)."
 	}
 
+	resetSuggestionIfEqual(&maxStackDepth)
 	conf.settings["max_stack_depth"] = maxStackDepth
 	return &maxStackDepth, nil
 }
@@ -683,6 +694,7 @@ func (conf *Configuration) CheckSharedMemoryType(logger *utils.Logger) (*Resourc
 		return nil, err
 	}
 
+	resetSuggestionIfEqual(&sharedMemoryType)
 	conf.settings["shared_memory_type"] = sharedMemoryType
 	return &sharedMemoryType, nil
 }
@@ -699,6 +711,7 @@ func (conf *Configuration) CheckDynamicSharedMemoryType(logger *utils.Logger) (*
 		return nil, err
 	}
 
+	resetSuggestionIfEqual(&dynamicSharedMemoryType)
 	conf.settings["dynamic_shared_memory_type"] = dynamicSharedMemoryType
 	return &dynamicSharedMemoryType, nil
 }
@@ -731,6 +744,16 @@ func suggestDefault(setting *ResourceSetting, details string) error {
 	}
 
 	return nil
+}
+
+// Function for setting `SuggestedValue` to an empty string if it's equal to `Value`.
+// We shouldn't make any suggestion if suggestion is equal to that of the currently set value
+func resetSuggestionIfEqual(setting *ResourceSetting) {
+	fmt.Printf("setting.Name: %s, setting.Value: %s, setting.SuggestedValue: %s\n", setting.Name, setting.Value, setting.SuggestedValue)
+
+	if setting.Value == setting.SuggestedValue {
+		setting.SuggestedValue = ""
+	}
 }
 
 ////////////////////////////////////////////////////////////////////
