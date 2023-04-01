@@ -23,7 +23,7 @@ const isActive = ref<Boolean>(false);
 const content = ref<HTMLElement | null>(null);
 
 const emit = defineEmits<{
-  (e: "resize", childSize: string): void;
+  (e: "resize"): void;
 }>();
 
 // When `content` slot content changes, the collapsible should be resized
@@ -55,7 +55,7 @@ onUnmounted(() => {
 function toggleCollapse() {
   isActive.value = !isActive.value;
   toggleCollapseContent(content.value);
-  if (content.value) emit("resize", content.value.style.maxHeight);
+  if (content.value) emit("resize");
 }
 </script>
 

@@ -15,13 +15,15 @@
   </div>
 
   <template v-if="configChecks.length !== 0">
-    <UiCollapsible ref="collapsibleSuggestions">
-      <template #title> Suggestions (%n) </template>
+    <UiCollapsible ref="collapsibleSuggestions" isSuggestions="true">
+      <template #title>
+        <span v-text="`Suggestions (${suggestions.length})`" />
+      </template>
       <template #content>
         <UiCollapsibleItem
           v-for="(item, index) in suggestions"
           :key="index"
-          @resize="(size: string) => setChildSize(collapsibleSuggestions)"
+          @resize="setChildSize(collapsibleSuggestions)"
         >
           <template #title>
             <span v-text="item.Name" />
@@ -62,7 +64,9 @@
     </UiCollapsible>
 
     <UiCollapsible ref="collapsiblePassedChecks">
-      <template #title> Checks that passed (%n) </template>
+      <template #title>
+        <span v-text="`Checks that passed  (${passedChecks.length})`" />
+      </template>
       <template #content>
         <UiCollapsibleItem
           v-for="(item, index) in passedChecks"

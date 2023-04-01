@@ -1,6 +1,6 @@
 <template>
   <div @click="toggleCollapse" class="header">
-    <IconBxCommentCheck v-if="isActive" class="icon" />
+    <IconBxCommentCheck v-if="isSuggestions" class="icon" />
     <IconBxCommentX v-else class="icon" />
     <div class="text" :class="{ active: isActive }">
       <slot name="title" />
@@ -23,6 +23,10 @@ import {
 defineExpose({
   resizeContentMaxHeight,
 });
+
+defineProps<{
+  isSuggestions?: Boolean;
+}>();
 
 const isActive = ref<Boolean>(false);
 const content = ref<HTMLElement | null>(null);
