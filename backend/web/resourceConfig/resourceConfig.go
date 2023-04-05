@@ -807,13 +807,18 @@ func (conf *Configuration) ApplySuggestions(suggestions *PatchResourceConfigsJSO
 
 // Removes all content inside postgresql.auto.conf and reloads configuration
 func (conf *Configuration) DiscardConfigs(logger *utils.Logger) error {
-	// 1. Wipe postgresql.auto.conf content
+	// 1. Create a backup of postgresql.auto.conf
+	if err := utils.BackupFile(conf.autoConfPath, conf.backupDir, conf.appUser, logger); err != nil {
+		return err
+	}
+	
+	// 2. Wipe postgresql.auto.conf content
 	_, err := conf.dbHandler.Exec("ALTER SYSTEM RESET ALL")
 	if err != nil {
 		logger.LogError(fmt.Errorf("failed to reset postgresql.auto.conf content: %v", err))
 	}
 
-	// 2. Reload configuration files
+	// 3. Reload configuration files
 	err = utils.ReloadConfiguration(conf.dbHandler, logger)
 	return err
 }
