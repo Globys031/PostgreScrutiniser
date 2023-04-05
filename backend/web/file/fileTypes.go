@@ -20,6 +20,8 @@ const (
 
 // BackupFile defines model for BackupFile.
 type BackupFile struct {
+	Diff []FileDiffLine `json:"diff"`
+
 	// Name name of the backup file
 	Name string `json:"name"`
 
@@ -43,14 +45,3 @@ type FileDiffLine struct {
 
 // FileDiffLineType specifies whether line has been added, removed or unchanged
 type FileDiffLineType string
-
-// FileDiffResponse defines model for FileDiffResponse.
-type FileDiffResponse struct {
-	Diff []FileDiffLine `json:"diff"`
-
-	// Filename the name of the file being compared
-	Filename string `json:"filename"`
-
-	// Time timestamp for when the backup file was created
-	Time time.Time `json:"time"`
-}

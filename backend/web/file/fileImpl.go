@@ -49,7 +49,7 @@ func (impl *FileImpl) GetBackups(c *gin.Context) {
 		return
 	}
 
-	data, err := ListBackups(impl.BackupDir, impl.Logger)
+	data, err := ListBackups(impl.BackupDir, impl.CurrentFile, impl.Logger)
 	if err != nil {
 		errorMsg := &ErrorMessage{
 			ErrorMessage: err.Error(),
@@ -127,40 +127,4 @@ func (impl *FileImpl) DeleteBackup(c *gin.Context, backupName string) {
 		c.JSON(http.StatusInternalServerError, &errorMsg)
 		return
 	}
-}
-
-// Gets comparison for specific backup file
-func (impl *FileImpl) GetFileDiff(c *gin.Context, backupName string) {
-	if len(c.Errors) > 0 || c.Writer.Status() >= 400 {
-		return
-	}
-
-	// 1. Validate parameter fits regex
-	err := impl.validateBackup(c, backupName)
-	if err != nil {
-		return
-	}
-
-	// 2. Compare backup
-	fullPath := impl.BackupDir + "/" + backupName
-	data, err := CompareBackup(fullPath, impl.CurrentFile, impl.Logger)
-	if err != nil {
-		errorMsg := &ErrorMessage{
-			ErrorMessage: err.Error(),
-		}
-		c.JSON(http.StatusInternalServerError, &errorMsg)
-		return
-	}
-
-	// 3. Return json response
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		errorMsg := &ErrorMessage{
-			ErrorMessage: err.Error(),
-		}
-		c.JSON(http.StatusInternalServerError, &errorMsg)
-		return
-	}
-
-	c.Data(http.StatusAccepted, "application/json", jsonData)
 }

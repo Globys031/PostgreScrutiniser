@@ -16,7 +16,8 @@ import (
 
 // Gets a list of currently available backups
 // @path - path to where backups are located
-func ListBackups(path string, logger *utils.Logger) (*[]BackupFile, error) {
+// @currentFile - current postgresql.auto.conf file location
+func ListBackups(path, currentFile string, logger *utils.Logger) (*[]BackupFile, error) {
 	// 1. Read list of backups
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -32,10 +33,18 @@ func ListBackups(path string, logger *utils.Logger) (*[]BackupFile, error) {
 
 		match, _ := regexp.MatchString("postgresql.auto.conf", filename)
 		if match {
+			// 3. Get file diff and return final response object
+			fullBackupPath := path + "/" + file.Name()
+			diff, err := CompareBackup(fullBackupPath, currentFile, logger);
+			if err != nil {
+				return nil, err
+			}
+
 			datetime, _ := utils.GetDateTime(path+filename, logger)
 			backupFile := BackupFile{
 				Name: filename,
 				Time: *datetime,
+				Diff: diff,
 			}
 			backups = append(backups, backupFile)
 		}
@@ -48,7 +57,7 @@ compares backup to current postgresql.auto.conf file
 @backupFile - full path to backup postgresql.auto.conf file
 @currentFile - full path to currently used postgresql.auto.conf file
 */
-func CompareBackup(backupFile, currentFile string, logger *utils.Logger) (FileDiffResponse, error) {
+func CompareBackup(backupFile, currentFile string, logger *utils.Logger) ([]FileDiffLine, error) {
 	// 1. Get content of currently used conf in bytes. Need elevated privileges to do this
 	cmd := exec.Command("sudo", "cat", currentFile)
 	stdout, _ := cmd.StdoutPipe()
@@ -57,7 +66,7 @@ func CompareBackup(backupFile, currentFile string, logger *utils.Logger) (FileDi
 	currentBytes, err := ioutil.ReadAll(stdout)
 	if err != nil {
 		logger.LogError(fmt.Errorf("failed reading current postgresql.auto.conf file: %v", err))
-		return FileDiffResponse{}, err
+		return nil, err
 	}
 	if err := cmd.Wait(); err != nil {
 		logger.LogError(fmt.Errorf("failed reading current postgresql.auto.conf file: %v", err))
@@ -68,7 +77,7 @@ func CompareBackup(backupFile, currentFile string, logger *utils.Logger) (FileDi
 	backupBytes, err := ioutil.ReadFile(backupFile)
 	if err != nil {
 		logger.LogError(fmt.Errorf("failed reading backup postgresql.auto.conf file: %v", err))
-		return FileDiffResponse{}, err
+		return nil, err
 	}
 
 	// 3. Get diff between the two files
@@ -85,12 +94,7 @@ func CompareBackup(backupFile, currentFile string, logger *utils.Logger) (FileDi
 		lineDiffs = append(lineDiffs, FileDiffLine{Line: diffText, Type: diffType})
 	}
 
-	datetime, _ := utils.GetDateTime(backupFile, logger)
-	return FileDiffResponse{
-		Time:     *datetime,
-		Filename: backupFile,
-		Diff:     lineDiffs,
-	}, nil
+	return lineDiffs, nil
 }
 
 /*

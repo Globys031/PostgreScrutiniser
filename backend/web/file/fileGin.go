@@ -25,9 +25,6 @@ type ServerInterface interface {
 
 	// (PUT /backup/{backup_name})
 	PutBackup(c *gin.Context, backupName string)
-
-	// (GET /file-diff/{backup_name})
-	GetFileDiff(c *gin.Context, backupName string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -109,29 +106,6 @@ func (siw *ServerInterfaceWrapper) PutBackup(c *gin.Context) {
 	siw.Handler.PutBackup(c, backupName)
 }
 
-// GetFileDiff operation middleware
-func (siw *ServerInterfaceWrapper) GetFileDiff(c *gin.Context) {
-
-	var err error
-
-	// ------------- Path parameter "backup_name" -------------
-	var backupName string
-
-	err = runtime.BindStyledParameter("simple", false, "backup_name", c.Param("backup_name"), &backupName)
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter backup_name: %s", err), http.StatusBadRequest)
-		return
-	}
-
-	c.Set(BearerAuthScopes, []string{""})
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-	}
-
-	siw.Handler.GetFileDiff(c, backupName)
-}
-
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -168,8 +142,6 @@ func RegisterHandlersWithOptions(router *gin.Engine, si ServerInterface, options
 	router.DELETE(options.BaseURL+"/backup/:backup_name", wrapper.DeleteBackup)
 
 	router.PUT(options.BaseURL+"/backup/:backup_name", wrapper.PutBackup)
-
-	router.GET(options.BaseURL+"/file-diff/:backup_name", wrapper.GetFileDiff)
 
 	return router
 }
