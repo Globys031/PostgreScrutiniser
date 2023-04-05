@@ -34,7 +34,7 @@ func (impl *AuthImpl) PostLogin(c *gin.Context) {
 	}
 
 	// 2. Validate username = postgrescrutiniser
-	request := AppUser{Name: *loginData.Name}
+	request := AppUser{Name: loginData.Name}
 	if err := impl.Validate.Struct(request); err != nil {
 		err := fmt.Errorf("Username should be the name of our main application user")
 		errorMsg := &ErrorMessage{
@@ -45,7 +45,7 @@ func (impl *AuthImpl) PostLogin(c *gin.Context) {
 	}
 
 	// 3. Check if password is correct
-	if correctPassword := utils.PasswordMatches(*loginData.Name, *loginData.Password, impl.Logger); !correctPassword {
+	if correctPassword := utils.PasswordMatches(loginData.Name, loginData.Password, impl.Logger); !correctPassword {
 		err := fmt.Errorf("Incorrect user password")
 		errorMsg := &ErrorMessage{
 			ErrorMessage: err.Error(),
@@ -66,7 +66,7 @@ func (impl *AuthImpl) PostLogin(c *gin.Context) {
 
 	// 4. Return token response (aka, login)
 	tokenResponse := &LoginSuccessResponse{
-		Token: &token,
+		Token: token,
 	}
 	jsonData, err := json.Marshal(tokenResponse)
 	if err != nil {

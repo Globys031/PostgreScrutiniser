@@ -41,7 +41,7 @@ type ResourceConfig struct {
 	GotError *bool `json:"got_error,omitempty"`
 
 	// Name Name of the setting
-	Name *string `json:"name,omitempty"`
+	Name string `json:"name"`
 
 	// RequiresRestart Whether a restart is required after changing the value
 	RequiresRestart *bool `json:"requires_restart,omitempty"`
@@ -53,7 +53,7 @@ type ResourceConfig struct {
 	Unit *string `json:"unit,omitempty"`
 
 	// Value Value of the setting
-	Value *string `json:"value,omitempty"`
+	Value string `json:"value"`
 }
 
 // ResourceConfigPatchSchema defines model for resourceConfigPatchSchema.

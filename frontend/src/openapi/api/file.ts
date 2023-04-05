@@ -34,13 +34,13 @@ export interface BackupFile {
      * @type {string}
      * @memberof BackupFile
      */
-    'name'?: string;
+    'name': string;
     /**
      * timestamp for when the backup file was created
      * @type {string}
      * @memberof BackupFile
      */
-    'time'?: string;
+    'time': string;
 }
 /**
  * 
@@ -66,13 +66,13 @@ export interface FileDiffLine {
      * @type {string}
      * @memberof FileDiffLine
      */
-    'line'?: string;
+    'line': string;
     /**
      * specifies whether line has been added, removed or unchanged
      * @type {string}
      * @memberof FileDiffLine
      */
-    'type'?: FileDiffLineTypeEnum;
+    'type': FileDiffLineTypeEnum;
 }
 
 export const FileDiffLineTypeEnum = {
@@ -94,19 +94,19 @@ export interface FileDiffResponse {
      * @type {Array<FileDiffLine>}
      * @memberof FileDiffResponse
      */
-    'diff'?: Array<FileDiffLine>;
+    'diff': Array<FileDiffLine>;
     /**
      * the name of the file being compared
      * @type {string}
      * @memberof FileDiffResponse
      */
-    'filename'?: string;
+    'filename': string;
     /**
      * timestamp for when the backup file was created
      * @type {string}
      * @memberof FileDiffResponse
      */
-    'time'?: string;
+    'time': string;
 }
 
 /**

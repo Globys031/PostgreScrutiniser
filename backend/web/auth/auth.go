@@ -25,7 +25,7 @@ type JwtClaims struct {
 // Generate JSON WEB TOKEN that will be saved in client's local storage.
 func (wrapper *JwtWrapper) GenerateToken(user LoginRequest, logger *utils.Logger) (signedToken string, err error) {
 	claims := &JwtClaims{
-		Name: *user.Name,
+		Name: user.Name,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Local().Add(time.Hour * time.Duration(wrapper.ExpirationHours))),
 			Issuer:    wrapper.Issuer,

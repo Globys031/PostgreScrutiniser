@@ -34,8 +34,8 @@ func ListBackups(path string, logger *utils.Logger) (*[]BackupFile, error) {
 		if match {
 			datetime, _ := utils.GetDateTime(path+filename, logger)
 			backupFile := BackupFile{
-				Name: &filename,
-				Time: datetime,
+				Name: filename,
+				Time: *datetime,
 			}
 			backups = append(backups, backupFile)
 		}
@@ -80,14 +80,14 @@ func CompareBackup(backupFile, currentFile string, logger *utils.Logger) (FileDi
 	for _, diff := range diffs {
 		diffType := FileDiffLineType(diff.Type.String())
 		diffText := diff.Text // Result will get messed up without this intermediate variable
-		lineDiffs = append(lineDiffs, FileDiffLine{Line: &diffText, Type: &diffType})
+		lineDiffs = append(lineDiffs, FileDiffLine{Line: diffText, Type: diffType})
 	}
 
 	datetime, _ := utils.GetDateTime(backupFile, logger)
 	return FileDiffResponse{
-		Time:     datetime,
-		Filename: &backupFile,
-		Diff:     &lineDiffs,
+		Time:     *datetime,
+		Filename: backupFile,
+		Diff:     lineDiffs,
 	}, nil
 }
 

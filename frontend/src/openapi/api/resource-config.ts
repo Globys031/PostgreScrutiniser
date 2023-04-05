@@ -65,7 +65,7 @@ export interface ResourceConfig {
      * @type {string}
      * @memberof ResourceConfig
      */
-    'name'?: string;
+    'name': string;
     /**
      * Whether a restart is required after changing the value
      * @type {boolean}
@@ -89,7 +89,7 @@ export interface ResourceConfig {
      * @type {string}
      * @memberof ResourceConfig
      */
-    'value'?: string;
+    'value': string;
 }
 /**
  * 

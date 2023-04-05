@@ -47,13 +47,13 @@ export interface LoginRequest {
      * @type {string}
      * @memberof LoginRequest
      */
-    'name'?: string;
+    'name': string;
     /**
      * 
      * @type {string}
      * @memberof LoginRequest
      */
-    'password'?: string;
+    'password': string;
 }
 /**
  * 
@@ -66,7 +66,7 @@ export interface LoginSuccessResponse {
      * @type {string}
      * @memberof LoginSuccessResponse
      */
-    'token'?: string;
+    'token': string;
 }
 
 /**

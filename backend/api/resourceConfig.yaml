@@ -157,6 +157,9 @@ components:
   schemas:
     resourceConfig:
       type: object
+      required:
+        - name
+        - value
       properties:
         name:
           type: string

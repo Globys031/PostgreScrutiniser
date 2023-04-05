@@ -194,6 +194,10 @@ components:
   schemas:
     FileDiffResponse:
       type: object
+      required:
+        - filename
+        - time
+        - diff
       properties:
         filename:
           type: string
@@ -217,6 +221,9 @@ components:
             $ref: '#/components/schemas/FileDiffLine'
     FileDiffLine:
       type: object
+      required:
+        - line
+        - type
       properties:
         line:
           type: string
@@ -227,6 +234,9 @@ components:
           description: specifies whether line has been added, removed or unchanged
     BackupFile:
       type: object
+      required:
+        - name
+        - time
       properties:
         name:
           type: string

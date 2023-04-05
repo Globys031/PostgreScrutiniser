@@ -21,10 +21,10 @@ const (
 // BackupFile defines model for BackupFile.
 type BackupFile struct {
 	// Name name of the backup file
-	Name *string `json:"name,omitempty"`
+	Name string `json:"name"`
 
 	// Time timestamp for when the backup file was created
-	Time *time.Time `json:"time,omitempty"`
+	Time time.Time `json:"time"`
 }
 
 // ErrorMessage defines model for ErrorMessage.
@@ -35,10 +35,10 @@ type ErrorMessage struct {
 // FileDiffLine defines model for FileDiffLine.
 type FileDiffLine struct {
 	// Line line that is compared between two files
-	Line *string `json:"line,omitempty"`
+	Line string `json:"line"`
 
 	// Type specifies whether line has been added, removed or unchanged
-	Type *FileDiffLineType `json:"type,omitempty"`
+	Type FileDiffLineType `json:"type"`
 }
 
 // FileDiffLineType specifies whether line has been added, removed or unchanged
@@ -46,11 +46,11 @@ type FileDiffLineType string
 
 // FileDiffResponse defines model for FileDiffResponse.
 type FileDiffResponse struct {
-	Diff *[]FileDiffLine `json:"diff,omitempty"`
+	Diff []FileDiffLine `json:"diff"`
 
 	// Filename the name of the file being compared
-	Filename *string `json:"filename,omitempty"`
+	Filename string `json:"filename"`
 
 	// Time timestamp for when the backup file was created
-	Time *time.Time `json:"time,omitempty"`
+	Time time.Time `json:"time"`
 }

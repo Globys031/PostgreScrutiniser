@@ -10,14 +10,14 @@ type ErrorMessage struct {
 
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
-	Name     *string `json:"name,omitempty"`
-	Password *string `json:"password,omitempty"`
+	Name     string `json:"name"`
+	Password string `json:"password"`
 }
 
 // LoginSuccessResponse defines model for LoginSuccessResponse.
 type LoginSuccessResponse struct {
 	// Token JWT access token for authenticated user
-	Token *string `json:"token,omitempty"`
+	Token string `json:"token"`
 }
 
 // PostLoginJSONRequestBody defines body for PostLogin for application/json ContentType.
