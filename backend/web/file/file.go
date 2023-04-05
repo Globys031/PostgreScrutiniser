@@ -73,11 +73,13 @@ func CompareBackup(backupFile, currentFile string, logger *utils.Logger) (FileDi
 
 	// 3. Get diff between the two files
 	dmp := diffmatchpatch.New()
-	diffs := dmp.DiffMain(string(currentBytes), string(backupBytes), false)
+	linesCurrent, linesBackup, lineArray := dmp.DiffLinesToChars(string(currentBytes), string(backupBytes))
+	diffByChar := dmp.DiffMain(linesCurrent, linesBackup, false)
+	diffsByLine := dmp.DiffCharsToLines(diffByChar, lineArray)
 
 	// 4. prepare result for JSON
 	var lineDiffs []FileDiffLine
-	for _, diff := range diffs {
+	for _, diff := range diffsByLine {
 		diffType := FileDiffLineType(diff.Type.String())
 		diffText := diff.Text // Result will get messed up without this intermediate variable
 		lineDiffs = append(lineDiffs, FileDiffLine{Line: diffText, Type: diffType})
