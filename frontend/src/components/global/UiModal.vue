@@ -10,7 +10,7 @@
       </div>
       <div class="button-container">
         <UiButton @click="confirmEmits" type="warning" :text="buttonText" />
-        <UiButton @click="$emit('close')" type="info" text="Cancel" />
+        <UiButton @click="$emit('close')" type="undo" text="Cancel" />
       </div>
     </div>
   </div>
