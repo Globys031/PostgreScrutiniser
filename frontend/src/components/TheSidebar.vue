@@ -59,7 +59,8 @@
         <div class="profile-details">
           <div class>
             <div class="username" v-text="sessionStore.username" />
-            <div class="hostname">examplehostname.com</div>
+            <div class="hostname" v-text="hostname" />
+            <!-- <div class="hostname">examplehostname.com</div> -->
           </div>
         </div>
         <IconBxLogOut id="log_out" @click="logout()" />
@@ -80,8 +81,12 @@ import {
   IconBxReceipt,
 } from "@iconify-prerendered/vue-bx";
 import { useSessionStore } from "../stores/session";
+import { useRouter } from "vue-router";
 
 const sessionStore = useSessionStore();
+const router = useRouter();
+
+const hostname = import.meta.env.VITE_BACKEND_HOSTNAME;
 
 const isOpen = ref<boolean>(false);
 
@@ -91,11 +96,7 @@ function toggleCloseButton() {
 
 function logout() {
   sessionStore.clearSession();
-}
-
-// function for truncating hostname if it's too long
-function truncateText() {
-  console.log("truncateText not implemented yet");
+  router.push("/login");
 }
 </script>
 

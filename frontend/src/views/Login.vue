@@ -43,12 +43,14 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import axios from "axios";
-import { useSessionStore } from "../stores/session";
-import { AuthApiFp } from "../openapi/api/auth";
+import { useRouter, useRoute } from "vue-router";
+import { useSessionStore } from "@/stores/session";
+import { AuthApiFp } from "@/openapi/api/auth";
 
-import type { ErrorMessage } from "../openapi/api/auth";
+import type { ErrorMessage } from "@/openapi/api/auth";
 
 const sessionStore = useSessionStore();
+const router = useRouter();
 const postLogin = AuthApiFp().postLogin;
 
 const username = ref<string>("");
@@ -79,6 +81,9 @@ async function submitForm() {
     apiResponse.value = "Request successful";
     gotError.value = false;
     isLoading.value = false;
+
+    // After a successful login, redirect to home page
+    router.push("/");
   } catch (error) {
     if (axios.isAxiosError(error)) {
       apiResponse.value = `Server response: ${

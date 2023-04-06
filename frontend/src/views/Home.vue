@@ -1,18 +1,16 @@
 <template>
   <main>
     <header>
-      <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
-
-      <div class="wrapper">
-        <nav>
-          <RouterLink to="/">Home</RouterLink>
-          <RouterLink to="/about">About</RouterLink>
-          <RouterLink to="/docs">Docs</RouterLink>
-        </nav>
-      </div>
+      <img
+        alt="PostgreScrutiniser logo"
+        class="logo"
+        src="@/assets/full-logo.svg"
+        width="175"
+        height="175"
+      />
     </header>
 
-    <HelloWorld msg="You did it!" />
+    <HelloWorld />
     <TheWelcome />
   </main>
 </template>
