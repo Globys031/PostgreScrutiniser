@@ -36,7 +36,7 @@ const props = withDefaults(
   }
 );
 
-const visible = ref<Boolean>(true);
+const visible = ref<boolean>(true);
 
 onMounted(() => {
   setTimeout(() => {

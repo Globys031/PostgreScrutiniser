@@ -25,10 +25,10 @@ defineExpose({
 });
 
 defineProps<{
-  isSuggestions?: Boolean;
+  isSuggestions?: boolean;
 }>();
 
-const isActive = ref<Boolean>(false);
+const isActive = ref<boolean>(false);
 const content = ref<HTMLElement | null>(null);
 
 function toggleCollapse() {

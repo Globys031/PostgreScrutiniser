@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { h, useCssModule, computed } from "vue";
+import { h, useCssModule, computed, ref, watch } from "vue";
 import {
   IconBxUndo,
   IconBxInfoCircle,
@@ -12,20 +12,72 @@ import {
 } from "@iconify-prerendered/vue-bx";
 import type { VNode, VNodeArrayChildren } from "vue";
 
-const props = defineProps<{
-  type: string; // undo/error/submit/info
-  text: string; // text inside the button
-}>();
+const props = withDefaults(
+  defineProps<{
+    disabled?: boolean; // make button unclickable
+    countdown?: number;
+    type: string; // undo/error/submit/info
+    text: string; // text inside the button
+  }>(),
+  {
+    disabled: false,
+    countdown: 3,
+  }
+);
 
 const styles = useCssModule();
 
-// ... Create a virtual node button
+// Using a computed ref for actual display to avoid side effects
 type VButtonType = ReturnType<typeof createVButton>;
-const vButton: VButtonType = createVButton();
+const vButtonRef = ref<VButtonType>(createVButton());
+const vButtonComponent = computed(() => vButtonRef.value);
 
-const vButtonChildren = (vButton.children as VNode[])[0];
+watch(
+  () => props.disabled,
+  () => {
+    if (!props.disabled) return;
+    const buttonText = vButtonRef.value.children[1].children[0].el;
 
-if (isVNodeArrayChildren(vButtonChildren.children)) {
+    let countdown = props.countdown;
+    buttonText.data = `Available in ${countdown}`;
+    const intervalId = setInterval(() => {
+      countdown -= 1;
+      buttonText.data = `Available in ${countdown}`;
+      if (countdown === 0) {
+        clearInterval(intervalId);
+        buttonText.data = props.text;
+      }
+    }, 1000);
+  }
+);
+
+// Create a dynamic vNode button based on props.
+function createVButton() {
+  /* Equivalent to:
+  ```
+  <button class="btn btn-warning btn-sep">
+    <div class="icon-container">
+      <IconBxUndo />
+    </div>
+    <div class="text-container">Test</div>
+  </button>
+  ``` */
+  const iconNode = h("div", { class: styles["icon-container"] }, []);
+  const textNode = h("div", { class: styles["text-container"] }, [props.text]);
+  const vButton = h(
+    "button",
+    {
+      class: [styles.btn, styles[`btn-${props.type}`]],
+    },
+    [iconNode, textNode]
+  );
+  addButtonIcon(vButton);
+  return vButton;
+}
+
+function addButtonIcon(vButton) {
+  const vButtonChildren = (vButton.children as VNode[])[0];
+  // if (isVNodeArrayChildren(vButtonChildren)) {
   switch (props.type) {
     case "submit":
       vButtonChildren.children.push(h(IconBxSend));
@@ -42,41 +94,27 @@ if (isVNodeArrayChildren(vButtonChildren.children)) {
     default:
       console.error("Wrong button type submitted");
   }
+  // }
 }
 
-// Using a computed ref instead of calling `vButton` 
-// directly to avoid typescript errors
-const vButtonComponent = computed(() => vButton);
+// function addDisabledClass() {
+//   vButtonRef.value.children.forEach((element) => {
+//     element.el.classList.add(styles.disabled);
+//   });
+// }
 
-// Create a dynamic vNode button based on props.
-function createVButton() {
-  /* Equivalent to:
-  ```
-  <button class="btn btn-warning btn-sep">
-    <div class="icon-container">
-      <IconBxUndo />
-    </div>
-    <div class="text-container">Test</div>
-  </button>
-  ``` */
-  return h(
-    "button",
-    {
-      class: [styles.btn, styles[`btn-${props.type}`]],
-    },
-    [
-      h("div", { class: styles["icon-container"] }, []),
-      h("div", { class: styles["text-container"] }, [props.text]),
-    ]
-  );
-}
+// function removeDisabledClass() {
+//   vButtonRef.value.children.forEach((element) => {
+//     element.el.classList.remove(styles.disabled);
+//   });
+// }
 
-// Define a type guard for VNodeArrayChildren
-function isVNodeArrayChildren(
-  children: unknown
-): children is VNodeArrayChildren {
-  return Array.isArray(children);
-}
+// // Define a type guard for VNodeArrayChildren
+// function isVNodeArrayChildren(
+//   children: unknown
+// ): children is VNodeArrayChildren {
+//   return Array.isArray(children);
+// }
 </script>
 
 <style module>

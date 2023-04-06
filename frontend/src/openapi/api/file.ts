@@ -30,6 +30,12 @@ import { BASE_PATH, COLLECTION_FORMATS, BaseAPI, RequiredError } from '../base';
  */
 export interface BackupFile {
     /**
+     * 
+     * @type {Array<FileDiffLine>}
+     * @memberof BackupFile
+     */
+    'diff': Array<FileDiffLine>;
+    /**
      * name of the backup file
      * @type {string}
      * @memberof BackupFile
@@ -83,31 +89,6 @@ export const FileDiffLineTypeEnum = {
 
 export type FileDiffLineTypeEnum = typeof FileDiffLineTypeEnum[keyof typeof FileDiffLineTypeEnum];
 
-/**
- * 
- * @export
- * @interface FileDiffResponse
- */
-export interface FileDiffResponse {
-    /**
-     * 
-     * @type {Array<FileDiffLine>}
-     * @memberof FileDiffResponse
-     */
-    'diff': Array<FileDiffLine>;
-    /**
-     * the name of the file being compared
-     * @type {string}
-     * @memberof FileDiffResponse
-     */
-    'filename': string;
-    /**
-     * timestamp for when the backup file was created
-     * @type {string}
-     * @memberof FileDiffResponse
-     */
-    'time': string;
-}
 
 /**
  * BackupApi - axios parameter creator
@@ -397,111 +378,6 @@ export class BackupApi extends BaseAPI {
      */
     public putBackup(backupName: string, options?: AxiosRequestConfig) {
         return BackupApiFp(this.configuration).putBackup(backupName, options).then((request) => request(this.axios, this.basePath));
-    }
-}
-
-
-/**
- * FileDiffApi - axios parameter creator
- * @export
- */
-export const FileDiffApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * get difference between current postgresql.auto.conf file and a backup file
-         * @param {string} backupName Name of the backup file to diff against
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        getFileDiff: async (backupName: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'backupName' is not null or undefined
-            assertParamExists('getFileDiff', 'backupName', backupName)
-            const localVarPath = `/file-diff/{backup_name}`
-                .replace(`{${"backup_name"}}`, encodeURIComponent(String(backupName)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication bearerAuth required
-            // http bearer authentication required
-            await setBearerAuthToObject(localVarHeaderParameter, configuration)
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
-
-/**
- * FileDiffApi - functional programming interface
- * @export
- */
-export const FileDiffApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = FileDiffApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * get difference between current postgresql.auto.conf file and a backup file
-         * @param {string} backupName Name of the backup file to diff against
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async getFileDiff(backupName: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<FileDiffResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getFileDiff(backupName, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
-        },
-    }
-};
-
-/**
- * FileDiffApi - factory interface
- * @export
- */
-export const FileDiffApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = FileDiffApiFp(configuration)
-    return {
-        /**
-         * get difference between current postgresql.auto.conf file and a backup file
-         * @param {string} backupName Name of the backup file to diff against
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        getFileDiff(backupName: string, options?: any): AxiosPromise<FileDiffResponse> {
-            return localVarFp.getFileDiff(backupName, options).then((request) => request(axios, basePath));
-        },
-    };
-};
-
-/**
- * FileDiffApi - object-oriented interface
- * @export
- * @class FileDiffApi
- * @extends {BaseAPI}
- */
-export class FileDiffApi extends BaseAPI {
-    /**
-     * get difference between current postgresql.auto.conf file and a backup file
-     * @param {string} backupName Name of the backup file to diff against
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof FileDiffApi
-     */
-    public getFileDiff(backupName: string, options?: AxiosRequestConfig) {
-        return FileDiffApiFp(this.configuration).getFileDiff(backupName, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

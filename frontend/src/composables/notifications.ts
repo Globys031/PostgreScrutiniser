@@ -8,7 +8,8 @@ import type { ErrorMessage } from "@/openapi/api/auth";
 export const displayNotification = (
   notificationContainer: Ref<UiNotificationContainer | null>,
   notificationType: string,
-  message: string
+  message: string,
+  duration?: number
 ) => {
   const titleMessage =
     notificationType === "success" ? "successful" : "unsuccessful";
@@ -18,7 +19,7 @@ export const displayNotification = (
       notificationType,
       `Operation ${titleMessage}`,
       message,
-      3000
+      duration ? duration : 3000
     );
   }
 };

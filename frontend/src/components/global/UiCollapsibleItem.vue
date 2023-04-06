@@ -17,9 +17,9 @@ import { ref, onMounted, onUnmounted } from "vue";
 import {
   toggleCollapseContent,
   resizeContentIfOpen,
-} from "../../composables/collapsible";
+} from "@/composables/collapsible";
 
-const isActive = ref<Boolean>(false);
+const isActive = ref<boolean>(false);
 const content = ref<HTMLElement | null>(null);
 
 const emit = defineEmits<{

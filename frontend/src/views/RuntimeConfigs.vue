@@ -2,35 +2,53 @@
   <div class="button-container">
     <UiButton @click="getSuggestions" type="info" text="Get checks" />
     <UiButton
-      @click="resetConfigs"
+      :disabled="buttonsDisabled"
+      :class="{ disabled: buttonsDisabled }"
+      @click="
+        buttonsDisabled
+          ? disabledButtonsNotification()
+          : modal.triggerModal(
+              'Reset Configurations',
+              `Are you sure you want to reset configurations? A backup will be created of the current postgresql.auto.conf file and current configurations within that file will be wiped out`,
+              'Restore',
+              resetConfigs
+            )
+      "
       type="warning"
       text="Reset Configurations"
     />
     <UiButton
-      v-if="suggestions.length !== 0"
-      @click="applySuggestions(suggestions)"
+      v-show="suggestions.length !== 0"
+      :disabled="buttonsDisabled"
+      :class="{ disabled: buttonsDisabled }"
+      @click="
+        buttonsDisabled
+          ? disabledButtonsNotification()
+          : applySuggestions(suggestions)
+      "
       type="submit"
       text="Apply all suggestions"
     />
+    <UiSpinner v-if="isLoadingConfigs" />
   </div>
 
   <template v-if="configChecks.length !== 0">
-    <UiCollapsible ref="collapsibleSuggestions" isSuggestions="true">
+    <UiCollapsible ref="collapsibleSuggestions" :isSuggestions="true">
       <template #title>
         <span v-text="`Suggestions (${suggestions.length})`" />
       </template>
       <template #content>
         <UiCollapsibleItem
-          v-for="(item, index) in suggestions"
+          v-for="(suggestion, index) in suggestions"
           :key="index"
           @resize="setChildSize(collapsibleSuggestions)"
         >
           <template #title>
-            <span v-text="item.Name" />
+            <span v-text="suggestion.Name" />
           </template>
 
           <template #content>
-            <div v-if="item.GotError" class="error-container">
+            <div v-if="suggestion.GotError" class="error-container">
               An error occurred when trying to check this configuration
               parameter. See application error logs for more information
             </div>
@@ -38,20 +56,28 @@
               <div class="suggestion-container">
                 <div>
                   <span class="value-tag">Current value: </span>
-                  <span v-text="`${item.Value} ${item.Unit}`" />
+                  <span v-text="`${suggestion.Value} ${suggestion.Unit}`" />
                 </div>
                 <div>
                   <span class="value-tag">Suggested value: </span>
-                  <span v-text="`${item.SuggestedValue} ${item.Unit}`" />
+                  <span
+                    v-text="`${suggestion.SuggestedValue} ${suggestion.Unit}`"
+                  />
                 </div>
                 <UiButton
-                  @click="applySuggestions([item])"
+                  :disabled="buttonsDisabled"
+                  :class="{ disabled: buttonsDisabled }"
+                  @click="
+                    buttonsDisabled
+                      ? disabledButtonsNotification()
+                      : applySuggestions([suggestion])
+                  "
                   type="submit"
                   text="Apply suggestion"
                 />
               </div>
               <div class="details-container">
-                <span v-text="item.Details" />
+                <span v-text="suggestion.Details" />
               </div>
             </div>
           </template>
@@ -69,16 +95,16 @@
       </template>
       <template #content>
         <UiCollapsibleItem
-          v-for="(item, index) in passedChecks"
+          v-for="(passedCheck, index) in passedChecks"
           :key="index"
           @resize="(size: string) => setChildSize(collapsiblePassedChecks)"
         >
           <template #title>
-            <span v-text="item.Name" />
+            <span v-text="passedCheck.Name" />
           </template>
 
           <template #content>
-            <div v-if="item.GotError" class="error-container">
+            <div v-if="passedCheck.GotError" class="error-container">
               An error occurred when trying to check this configuration
               parameter. See application error logs for more information
             </div>
@@ -86,11 +112,11 @@
               <div class="suggestion-container">
                 <div>
                   <span class="value-tag">Current value: </span>
-                  <span v-text="`${item.Value} ${item.Unit}`" />
+                  <span v-text="`${passedCheck.Value} ${passedCheck.Unit}`" />
                 </div>
               </div>
               <div class="details-container">
-                <span v-text="item.Details" />
+                <span v-text="passedCheck.Details" />
               </div>
             </div>
           </template>
@@ -110,6 +136,15 @@
     type="success"
     message="example message"
   />
+
+  <UiModal
+    v-if="modal.showModal.value"
+    :title="modal.modalTitle.value"
+    :content="modal.modalContent.value"
+    :buttonText="modal.modalButtonText.value"
+    :functionToRun="modal.modalFunction.value"
+    @close="modal.showModal.value = !modal.showModal"
+  />
 </template>
 
 <script setup lang="ts">
@@ -121,18 +156,23 @@ import {
   displayNotification,
   displayNotificationError,
 } from "@/composables/notifications";
+import { useModal } from "@/composables/modal";
 import type { ResourceConfigPatchSchema } from "@/openapi/api/resource-config";
 import type { ResourceConfigPascalCase } from "@/openapi/typeInference";
 import type { UiNotificationContainer } from "@/types/notification";
 import type { UiCollapsibleComponent } from "@/types/collapsibleComponent";
 
 const sessionStore = useSessionStore();
+const modal = useModal();
 
 const resourceApi = ResourceApiFp(
   new Configuration({
     accessToken: sessionStore.token,
   })
 );
+
+const timeout = 3000; // 3 seconds
+const buttonsDisabled = ref<boolean>(false); // disable for 3 seconds after applying configs
 
 // Html ref tag references:
 const collapsibleSuggestions = ref<UiCollapsibleComponent | null>(null);
@@ -141,6 +181,8 @@ const notificationContainer = ref<UiNotificationContainer | null>(null);
 
 // Data to be displayed
 const configChecks = ref<ResourceConfigPascalCase[]>([]);
+
+const isLoadingConfigs = ref<boolean>(false);
 
 const suggestions = computed(() => {
   const values = Object.values(configChecks.value);
@@ -157,6 +199,7 @@ const passedChecks = computed(() => {
 async function getSuggestions() {
   try {
     const getRequest = await resourceApi.getResourceConfigs();
+    isLoadingConfigs.value = true;
     const { data } = await getRequest();
     displayNotification(
       notificationContainer,
@@ -164,9 +207,11 @@ async function getSuggestions() {
       "Suggestions will be displayed inside collapsible tables"
     );
 
-    configChecks.value = data as ResourceConfigPascalCase[];
+    configChecks.value = data as unknown as ResourceConfigPascalCase[];
+    isLoadingConfigs.value = false;
   } catch (error) {
     configChecks.value = [];
+    isLoadingConfigs.value = false;
     displayError(error);
   }
 }
@@ -192,13 +237,16 @@ async function applySuggestions(suggestions: ResourceConfigPascalCase[]) {
       "Suggestions applied"
     );
     refreshChecks();
+    disableButtons();
   } catch (error) {
     displayError(error);
     configChecks.value = []; // reset table to empty
   }
 }
 
+//  TO DO: needs a modal window for confirmation
 async function resetConfigs() {
+  console.log("resetConfigs()");
   try {
     const deleteConfigsRequest = resourceApi.deleteResourceConfigs();
     const deleteRequest = await deleteConfigsRequest;
@@ -206,6 +254,7 @@ async function resetConfigs() {
 
     // After patching requests, renew table (suggestion) data.
     refreshChecks();
+    disableButtons();
   } catch (error) {
     displayError(error);
   }
@@ -229,6 +278,24 @@ function setChildSize(collapsible: UiCollapsibleComponent | null) {
   collapsible
     ? collapsible.resizeContentMaxHeight()
     : console.error("collapsible component is null");
+}
+
+// After applying configs, it is necessary that user cannot apply suggestions for a
+// short period of time to avoid systemd errors caused by too many restart of psotgresql
+function disableButtons() {
+  buttonsDisabled.value = true;
+  setTimeout(() => {
+    buttonsDisabled.value = false;
+  }, timeout);
+}
+
+function disabledButtonsNotification() {
+  displayNotification(
+    notificationContainer,
+    "error",
+    "Cannot click buttons that would cause PostgreSql to reload. Some configurations require restarting PostgreSql. To avoid crashing systemd instance, the amount of requests is limited to one every 3 seconds.",
+    10000
+  );
 }
 </script>
 
@@ -275,5 +342,14 @@ function setChildSize(collapsible: UiCollapsibleComponent | null) {
   background-color: #f0f0f0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin: 2rem 0;
+}
+
+/**Disabled button**/
+.disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+.disabled:hover {
+  color: #999;
 }
 </style>

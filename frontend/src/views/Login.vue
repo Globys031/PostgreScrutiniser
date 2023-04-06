@@ -54,9 +54,9 @@ const postLogin = AuthApiFp().postLogin;
 const username = ref<string>("");
 const password = ref<string>("");
 const apiResponse = ref<string>(""); // login request response message
-const gotError = ref<Boolean>(false);
+const gotError = ref<boolean>(false);
 
-const isLoading = ref<Boolean>(false);
+const isLoading = ref<boolean>(false);
 
 async function submitForm() {
   try {
