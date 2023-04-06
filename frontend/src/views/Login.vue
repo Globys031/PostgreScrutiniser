@@ -245,7 +245,7 @@ input[type="password"]:valid ~ .validation span:last-child {
 input[type="submit"] {
   border: none;
   display: block;
-  background-color: var(--color-button);
+  background-color: var(--vt-button);
   color: #fff;
   font-weight: bold;
   text-transform: uppercase;
