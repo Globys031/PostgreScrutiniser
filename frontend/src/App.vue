@@ -21,7 +21,7 @@ const sessionStore = useSessionStore();
   left: 78px;
   width: calc(100% - 78px);
   transition: all 0.5s ease;
-  z-index: 2;
+  /* z-index: 2; */
 }
 
 .sidebar.open + .main-body {
