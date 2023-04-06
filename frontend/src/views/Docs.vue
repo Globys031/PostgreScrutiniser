@@ -1,8 +1,10 @@
 <template>
   <div id="swagger-ui"></div>
+  <UiSpinner v-if="isLoading" />
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import SwaggerUI from "swagger-ui";
 import "swagger-ui/dist/swagger-ui.css";
 import axios from "axios";
@@ -14,6 +16,8 @@ const urls = [
   `http://${import.meta.env.VITE_BACKEND_HOST}/api/docs/resource-config`,
 ];
 
+const isLoading = ref<boolean>(true);
+
 // IIFE for displaying swagger docs
 (async () => {
   const mergedSpec = await fetchAndMergeSpecs(urls);
@@ -21,6 +25,7 @@ const urls = [
     dom_id: "#swagger-ui",
     spec: mergedSpec,
   });
+  isLoading.value = false;
 })();
 
 // function for merging multiple openapi specifiations

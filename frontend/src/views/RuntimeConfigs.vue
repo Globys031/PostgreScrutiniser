@@ -241,7 +241,6 @@ async function applySuggestions(suggestions: ResourceConfigPascalCase[]) {
   }
 }
 
-//  TO DO: needs a modal window for confirmation
 async function resetConfigs() {
   console.log("resetConfigs()");
   try {

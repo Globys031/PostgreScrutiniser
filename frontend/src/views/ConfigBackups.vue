@@ -183,7 +183,6 @@ async function restoreBackup(backupName: string) {
   }
 }
 
-// Function for removing all backup files (TO DO: needs a modal window for confirmation)
 async function deleteBackups() {
   try {
     const deleteAllRequest = await backupApi.deleteBackups();
@@ -201,7 +200,6 @@ async function deleteBackups() {
   }
 }
 
-// Function for removing a single backup file (TO DO: needs a modal window for confirmation)
 async function deleteBackup(backupName: string) {
   if (!backupName) {
     displayError(
