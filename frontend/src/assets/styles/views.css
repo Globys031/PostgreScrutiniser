@@ -1,0 +1,25 @@
+/* Styles in here are used by ConfigBackups.vue and RuntimeConfigs.vue */
+
+/* `g-` as in `global-` */
+.g-button-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.g-empty-table-message {
+  padding: 10px;
+}
+
+.g-no-data-message {
+  padding: 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-align: center;
+  color: #444;
+  background-color: #f0f0f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 2rem 0;
+}

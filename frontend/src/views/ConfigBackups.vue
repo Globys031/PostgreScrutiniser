@@ -1,5 +1,5 @@
 <template>
-  <div class="button-container">
+  <div class="g-button-container">
     <UiButton
       :class="{ disabled: isLoadingList }"
       @click="isLoadingList ? disabledButtonsNotification() : getBackups()"
@@ -42,7 +42,7 @@
 
         <template #content>
           <FileDiff v-show="fileDiff" :diff="backup.diff" />
-          <div class="suggestion-container">
+          <div class="content-container">
             <UiButton
               @click="
                 isLoadingList
@@ -76,7 +76,7 @@
       </UiCollapsibleItem>
     </div>
   </template>
-  <div v-else class="no-data-message">
+  <div v-else class="g-no-data-message">
     No data yet. Click "List backups" to get started
   </div>
 
@@ -100,10 +100,7 @@
 import { ref } from "vue";
 import { Configuration } from "@/openapi/configuration";
 import { useSessionStore } from "@/stores/session";
-import {
-  displayNotification,
-  displayNotificationError,
-} from "@/composables/notifications";
+import { displayNotification, displayError } from "@/composables/notifications";
 import { useModal } from "@/composables/modal";
 import { BackupApiFp } from "@/openapi/api/file";
 import FileDiff from "@/components/FileDiff.vue";
@@ -158,13 +155,16 @@ async function getBackups() {
   } catch (error) {
     backups.value = [];
     isLoadingList.value = false;
-    displayError(error);
+    displayError(notificationContainer, error);
   }
 }
 
 async function restoreBackup(backupName: string) {
   if (!backupName) {
-    displayError("Could not get backup name during restore");
+    displayError(
+      notificationContainer,
+      "Could not get backup name during restore"
+    );
     return;
   }
   try {
@@ -179,7 +179,7 @@ async function restoreBackup(backupName: string) {
     // After restoring a backup, get new list of backups and resize table
     getBackups();
   } catch (error) {
-    displayError(error);
+    displayError(notificationContainer, error);
   }
 }
 
@@ -197,14 +197,17 @@ async function deleteBackups() {
     // After deleting backups, get new list of backups and resize table
     getBackups();
   } catch (error) {
-    displayError(error);
+    displayError(notificationContainer, error);
   }
 }
 
 // Function for removing a single backup file (TO DO: needs a modal window for confirmation)
 async function deleteBackup(backupName: string) {
   if (!backupName) {
-    displayError("Could not get backup name during removal");
+    displayError(
+      notificationContainer,
+      "Could not get backup name during removal"
+    );
     return;
   }
   try {
@@ -219,15 +222,8 @@ async function deleteBackup(backupName: string) {
     // After deleting a backup, get new list of backups and resize table
     getBackups();
   } catch (error) {
-    displayError(error);
+    displayError(notificationContainer, error);
   }
-}
-
-// REUSE (This means that RuntimeConfigs.vue also has same exact code)
-function displayError(error: unknown) {
-  error instanceof Error
-    ? displayNotificationError(notificationContainer, error)
-    : console.error(error);
 }
 
 // Function for transforming data.time to a format of YYYY-MM-DD
@@ -252,59 +248,17 @@ function disabledButtonsNotification() {
 </script>
 
 <style scoped>
-/* Iskelt i atskira kad butu reusable (iskelt i base.css) */
-.button-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-/* iskelt i atskira kad butu reusable */
-.empty-table-message {
-  padding: 10px;
-}
-
-/* Iskelt i atskira kad butu reusable */
-.no-data-message {
-  padding: 1rem;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
-  font-size: 1.1em;
-  font-weight: bold;
-  text-align: center;
-  color: #444;
-  background-color: #f0f0f0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin: 2rem 0;
-}
-
-/* Iskelt i atskira kad butu reusable (pervadint i "collapsible-children-container") */
-.suggestion-container {
+.content-container {
   padding-top: 10px;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   margin-bottom: 1rem;
 }
-
 .title-container {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-}
-
-/* iskelt i atskira kad butu reusable */
-.no-data-message {
-  padding: 1rem;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
-  font-size: 1.1em;
-  font-weight: bold;
-  text-align: center;
-  color: #444;
-  background-color: #f0f0f0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin: 2rem 0;
 }
 
 .content {
@@ -326,8 +280,6 @@ function disabledButtonsNotification() {
   font-weight: bold;
 }
 
-/* TO DO: make reusable */
-/**Disabled button**/
 .disabled {
   background: #ccc;
   cursor: not-allowed;

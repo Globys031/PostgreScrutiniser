@@ -42,3 +42,12 @@ export const displayNotificationError = (
         "Something went wrong. See console tab for more info"
       );
 };
+
+export const displayError = (
+  notificationContainer: Ref<UiNotificationContainer | null>,
+  error: unknown
+) => {
+  error instanceof Error
+    ? displayNotificationError(notificationContainer, error)
+    : console.error(error);
+};

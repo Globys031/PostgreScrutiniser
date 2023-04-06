@@ -1,5 +1,5 @@
 <template>
-  <div class="button-container">
+  <div class="g-button-container">
     <UiButton @click="getSuggestions" type="info" text="Get checks" />
     <UiButton
       :disabled="buttonsDisabled"
@@ -83,7 +83,7 @@
           </template>
         </UiCollapsibleItem>
 
-        <span v-if="suggestions.length === 0" class="empty-table-message">
+        <span v-if="suggestions.length === 0" class="g-empty-table-message">
           No suggestions were made
         </span>
       </template>
@@ -121,13 +121,13 @@
             </div>
           </template>
         </UiCollapsibleItem>
-        <span v-if="passedChecks.length === 0" class="empty-table-message">
+        <span v-if="passedChecks.length === 0" class="g-empty-table-message">
           No checks have passed
         </span>
       </template>
     </UiCollapsible>
   </template>
-  <div v-else class="no-data-message">
+  <div v-else class="g-no-data-message">
     No data yet. Click "Get Checks" to get started
   </div>
 
@@ -152,10 +152,7 @@ import { ref, computed } from "vue";
 import { ResourceApiFp } from "@/openapi/api/resource-config";
 import { Configuration } from "@/openapi/configuration";
 import { useSessionStore } from "@/stores/session";
-import {
-  displayNotification,
-  displayNotificationError,
-} from "@/composables/notifications";
+import { displayNotification, displayError } from "@/composables/notifications";
 import { useModal } from "@/composables/modal";
 import type { ResourceConfigPatchSchema } from "@/openapi/api/resource-config";
 import type { ResourceConfigPascalCase } from "@/openapi/typeInference";
@@ -212,7 +209,7 @@ async function getSuggestions() {
   } catch (error) {
     configChecks.value = [];
     isLoadingConfigs.value = false;
-    displayError(error);
+    displayError(notificationContainer, error);
   }
 }
 
@@ -239,7 +236,7 @@ async function applySuggestions(suggestions: ResourceConfigPascalCase[]) {
     refreshChecks();
     disableButtons();
   } catch (error) {
-    displayError(error);
+    displayError(notificationContainer, error);
     configChecks.value = []; // reset table to empty
   }
 }
@@ -256,7 +253,7 @@ async function resetConfigs() {
     refreshChecks();
     disableButtons();
   } catch (error) {
-    displayError(error);
+    displayError(notificationContainer, error);
   }
 }
 
@@ -265,12 +262,6 @@ function refreshChecks() {
   getSuggestions();
   setChildSize(collapsibleSuggestions.value);
   setChildSize(collapsiblePassedChecks.value);
-}
-
-function displayError(error: unknown) {
-  error instanceof Error
-    ? displayNotificationError(notificationContainer, error)
-    : console.error(error);
 }
 
 // After `UiCollapsibleItem` is resized, resize `UiCollapsible` as well
@@ -300,16 +291,6 @@ function disabledButtonsNotification() {
 </script>
 
 <style scoped>
-.button-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.empty-table-message {
-  padding: 10px;
-}
-
 .suggestion-container {
   padding-top: 10px;
   display: flex;
@@ -331,20 +312,6 @@ function disabledButtonsNotification() {
   font-weight: bold;
 }
 
-.no-data-message {
-  padding: 1rem;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
-  font-size: 1.1em;
-  font-weight: bold;
-  text-align: center;
-  color: #444;
-  background-color: #f0f0f0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin: 2rem 0;
-}
-
-/**Disabled button**/
 .disabled {
   background: #ccc;
   cursor: not-allowed;
