@@ -15,7 +15,7 @@ import type { VNode, VNodeArrayChildren } from "vue";
 const props = withDefaults(
   defineProps<{
     disabled?: boolean; // make button unclickable
-    countdown?: number;
+    countdown?: number; // countdown till button becomes clickable
     type: string; // undo/error/submit/info
     text: string; // text inside the button
   }>(),
@@ -36,6 +36,19 @@ watch(
   () => props.disabled,
   () => {
     if (!props.disabled) return;
+
+    if (
+      !vButtonRef.value.children ||
+      !isVNodeArrayChildren(vButtonRef.value.children) ||
+      !vButtonRef.value.children[1]
+    ) {
+      console.error(
+        "Could not start countdown. VButton children array was possibly null"
+      );
+      return;
+    }
+    // @ts-ignore: this is causing too many issues that make code overcomplicated.
+    // Making an exception for this line and disabling typescript type checking.
     const buttonText = vButtonRef.value.children[1].children[0].el;
 
     let countdown = props.countdown;
@@ -75,46 +88,41 @@ function createVButton() {
   return vButton;
 }
 
-function addButtonIcon(vButton) {
+function addButtonIcon(vButton: VButtonType) {
   const vButtonChildren = (vButton.children as VNode[])[0];
-  // if (isVNodeArrayChildren(vButtonChildren)) {
-  switch (props.type) {
-    case "submit":
-      vButtonChildren.children.push(h(IconBxSend));
-      break;
-    case "warning":
-      vButtonChildren.children.push(h(IconBxError));
-      break;
-    case "info":
-      vButtonChildren.children.push(h(IconBxInfoCircle));
-      break;
-    case "undo":
-      vButtonChildren.children.push(h(IconBxUndo));
-      break;
-    default:
-      console.error("Wrong button type submitted");
+  if (!vButtonChildren.children) {
+    console.error(
+      "Could not add button icon because vButton children was null"
+    );
+    return;
   }
-  // }
+
+  if (isVNodeArrayChildren(vButtonChildren.children)) {
+    switch (props.type) {
+      case "submit":
+        vButtonChildren.children.push(h(IconBxSend));
+        break;
+      case "warning":
+        vButtonChildren.children.push(h(IconBxError));
+        break;
+      case "info":
+        vButtonChildren.children.push(h(IconBxInfoCircle));
+        break;
+      case "undo":
+        vButtonChildren.children.push(h(IconBxUndo));
+        break;
+      default:
+        console.error("Wrong button type submitted");
+    }
+  }
 }
 
-// function addDisabledClass() {
-//   vButtonRef.value.children.forEach((element) => {
-//     element.el.classList.add(styles.disabled);
-//   });
-// }
-
-// function removeDisabledClass() {
-//   vButtonRef.value.children.forEach((element) => {
-//     element.el.classList.remove(styles.disabled);
-//   });
-// }
-
-// // Define a type guard for VNodeArrayChildren
-// function isVNodeArrayChildren(
-//   children: unknown
-// ): children is VNodeArrayChildren {
-//   return Array.isArray(children);
-// }
+// Define a type guard for VNodeArrayChildren
+function isVNodeArrayChildren(
+  children: unknown
+): children is VNodeArrayChildren {
+  return Array.isArray(children);
+}
 </script>
 
 <style module>

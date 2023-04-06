@@ -10,7 +10,7 @@
           : modal.triggerModal(
               'Reset Configurations',
               `Are you sure you want to reset configurations? A backup will be created of the current postgresql.auto.conf file and current configurations within that file will be wiped out`,
-              'Restore',
+              'Reset',
               resetConfigs
             )
       "
