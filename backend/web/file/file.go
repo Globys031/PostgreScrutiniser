@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 
@@ -102,7 +103,13 @@ Replaces current postgresql.auto.conf file with backup file and reloads configur
 @backupFile - full path to backup postgresql.auto.conf file
 @currentFile - full path to currently used postgresql.auto.conf file
 */
-func RestoreBackup(postgresUsername string, backupFile, currentFile string, db *sql.DB, logger *utils.Logger) error {
+func RestoreBackup(postgresUsername, backupFile, currentFile string, appUser *utils.User, db *sql.DB, logger *utils.Logger) error {
+	// 1. Create a backup of current postgresql.auto.conf
+	if err := utils.BackupFile(currentFile, path.Dir(backupFile), appUser, logger); err != nil {
+		return err
+	}
+
+	// 2. Restore specified backup
 	cmd := exec.Command("sudo", "mv", backupFile, currentFile)
 	if err := cmd.Run(); err != nil {
 		err = fmt.Errorf("error replacing current postgresql.auto.conf with backup: %v", err)

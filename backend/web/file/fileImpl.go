@@ -15,6 +15,7 @@ type FileImpl struct {
 	BackupDir        string // directory in which backups are saved
 	CurrentFile      string // full path to currently used postgresql.auto.conf
 	PostgresUsername string
+	AppUser           *utils.User
 	Logger           *utils.Logger
 	DbHandler        *sql.DB
 	Validate         *validator.Validate
@@ -84,7 +85,7 @@ func (impl *FileImpl) PutBackup(c *gin.Context, backupName string) {
 
 	// 2. Replace backup
 	fullPath := impl.BackupDir + "/" + backupName
-	if err := RestoreBackup(impl.PostgresUsername, fullPath, impl.CurrentFile, impl.DbHandler, impl.Logger); err != nil {
+	if err := RestoreBackup(impl.PostgresUsername, fullPath, impl.CurrentFile, impl.AppUser, impl.DbHandler, impl.Logger); err != nil {
 		errorMsg := &ErrorMessage{
 			ErrorMessage: err.Error(),
 		}

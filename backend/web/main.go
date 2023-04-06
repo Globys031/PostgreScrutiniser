@@ -39,7 +39,7 @@ func RegisterRoutes(jwt *auth.JwtWrapper, dbHandler *sql.DB, appUser *utils.User
 	// Register routes
 	registerAuthRoute(router, validate, jwt, dbHandler, logger)
 	registerResourceConfigRoute(router, validate, jwt, dbHandler, backupDir, postgresUser, appUser, configFilePath, logger)
-	registerFileRoute(router, validate, jwt, dbHandler, backupDir, postgresUser, configFilePath, logger)
+	registerFileRoute(router, validate, jwt, dbHandler, backupDir, postgresUser, appUser, configFilePath, logger)
 	// Registers routes for openapi specification
 	registerDocsRoutes(router, logger)
 
@@ -82,7 +82,7 @@ func registerResourceConfigRoute(router *gin.Engine, validate *validator.Validat
 	resourceConfig.RegisterHandlersWithOptions(router, resourceConfigApi, *optionsResourceConfig)
 }
 
-func registerFileRoute(router *gin.Engine, validate *validator.Validate, jwt *auth.JwtWrapper, dbHandler *sql.DB, backupDir string, postgresUser *utils.User, configFilePath string, logger *utils.Logger) {
+func registerFileRoute(router *gin.Engine, validate *validator.Validate, jwt *auth.JwtWrapper, dbHandler *sql.DB, backupDir string, postgresUser *utils.User, appUser *utils.User, configFilePath string, logger *utils.Logger) {
 	optionsFile := &file.GinServerOptions{
 		BaseURL: "/api",
 		Middlewares: []file.MiddlewareFunc{
@@ -95,6 +95,7 @@ func registerFileRoute(router *gin.Engine, validate *validator.Validate, jwt *au
 		BackupDir:        backupDir,
 		CurrentFile:      filepath.Dir(configFilePath) + "/postgresql.auto.conf",
 		PostgresUsername: postgresUser.Username,
+		AppUser: appUser,
 		Logger:           logger,
 		DbHandler:        dbHandler,
 		Validate:         validate,

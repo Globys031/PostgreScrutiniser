@@ -115,6 +115,11 @@ func (impl *ResourceConfigImpl) PatchResourceConfigs(c *gin.Context) {
 		return
 	}
 
+	// Reuse the same reference that contains resource setting details
+	if impl.Configuration == nil {
+		impl.Configuration = InitChecks(impl.ConfigFile, impl.DbHandler, impl.AppUser, impl.PostgresUser, impl.Logger)
+	}
+
 	// Bind post body and validate
 	suggestions := PatchResourceConfigsJSONBody{}
 	if err := c.BindJSON(&suggestions); err != nil {
