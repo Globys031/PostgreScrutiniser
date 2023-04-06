@@ -7,8 +7,8 @@
 
 <script setup lang="ts">
 import { RouterView } from "vue-router";
-import { useSessionStore } from "./stores/session";
-import TheSidebar from "./components/TheSidebar.vue";
+import { useSessionStore } from "@/stores/session";
+import TheSidebar from "@/components/TheSidebar.vue";
 
 const sessionStore = useSessionStore();
 </script>

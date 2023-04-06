@@ -14,7 +14,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { toggleCollapseContent } from "../../composables/collapsible";
+import { toggleCollapseContent } from "@/composables/collapsible";
 import {
   IconBxCommentCheck,
   IconBxCommentX,

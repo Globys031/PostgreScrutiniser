@@ -43,7 +43,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import axios from "axios";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter } from "vue-router";
 import { useSessionStore } from "@/stores/session";
 import { AuthApiFp } from "@/openapi/api/auth";
 

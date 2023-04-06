@@ -1,8 +1,8 @@
 import { createRouter, createWebHistory } from "vue-router";
-import HomeView from "../views/Home.vue";
-import LoginView from "../views/Login.vue";
+import HomeView from "@/views/Home.vue";
+import LoginView from "@/views/Login.vue";
 
-import { useSessionStore } from "../stores/session";
+import { useSessionStore } from "@/stores/session";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
