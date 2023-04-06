@@ -20,17 +20,11 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
-      path: "/about",
-      name: "about",
+      path: "/docs",
+      name: "docs",
       // route level code-splitting
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import("../views/About.vue"),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: "/docs",
-      name: "docs",
       component: () => import("../views/Docs.vue"),
       meta: { requiresAuth: true },
     },
@@ -46,13 +40,24 @@ const router = createRouter({
       component: () => import("../views/ConfigBackups.vue"),
       meta: { requiresAuth: true },
     },
+    {
+      // TO DO: implement a 404 page.
+      // Path might cause problems after merging backend and frontend on same port
+      path: "/:catchAll(.*)",
+      name: "404",
+      component: LoginView,
+      meta: {
+        requiresAuth: false,
+      },
+    },
   ],
 });
 
 router.beforeEach((to) => {
   const sessionStore = useSessionStore();
   if (to.meta.requiresAuth && !sessionStore.token) return "/login";
-  if (sessionStore.token && to.name == "login") return "/";
+  if (sessionStore.token && (to.name === "login" || to.name === "404"))
+    return "/";
 });
 
 export default router;

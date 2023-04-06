@@ -1,8 +1,3 @@
-<script setup lang="ts">
-import WelcomeItem from "./WelcomeItem.vue";
-import { IconBxBookContent, IconBxWrench } from "@iconify-prerendered/vue-bx";
-</script>
-
 <template>
   <WelcomeItem>
     <template #icon>
@@ -57,3 +52,8 @@ import { IconBxBookContent, IconBxWrench } from "@iconify-prerendered/vue-bx";
     related details are available in <code>README.md</code>.
   </WelcomeItem>
 </template>
+
+<script setup lang="ts">
+import WelcomeItem from "./WelcomeItem.vue";
+import { IconBxBookContent, IconBxWrench } from "@iconify-prerendered/vue-bx";
+</script>

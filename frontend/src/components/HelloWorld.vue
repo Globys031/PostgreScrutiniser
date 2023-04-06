@@ -1,10 +1,10 @@
-<script setup lang="ts"></script>
-
 <template>
   <div class="greetings">
     <h3>Homepage for PostgreScrutiniser</h3>
   </div>
 </template>
+
+<script setup lang="ts"></script>
 
 <style scoped>
 h3 {
