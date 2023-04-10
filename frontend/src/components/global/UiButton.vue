@@ -64,6 +64,26 @@ watch(
   }
 );
 
+// Cannot use slots with button vnode so using a watcher instead
+watch(
+  () => props.text,
+  (newText, oldText) => {
+    if (newText === oldText) return;
+
+    if (
+      !vButtonRef.value.children ||
+      !isVNodeArrayChildren(vButtonRef.value.children) ||
+      !vButtonRef.value.children[1]
+    ) {
+      console.error("Could not replace button text");
+      return;
+    }
+    // @ts-ignore
+    const buttonText = vButtonRef.value.children[1].children[0].el;
+    buttonText.data = newText;
+  }
+);
+
 // Create a dynamic vNode button based on props.
 function createVButton() {
   /* Equivalent to:
@@ -72,10 +92,11 @@ function createVButton() {
     <div class="icon-container">
       <IconBxUndo />
     </div>
-    <div class="text-container">Test</div>
+    <div class="text-container"></slot></div>
   </button>
   ``` */
   const iconNode = h("div", { class: styles["icon-container"] }, []);
+  // const textSlot = h("slot", {}, instance?.slots);
   const textNode = h("div", { class: styles["text-container"] }, [props.text]);
   const vButton = h(
     "button",

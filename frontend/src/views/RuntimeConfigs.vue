@@ -29,10 +29,26 @@
       type="submit"
       text="Apply all suggestions"
     />
+    <UiButton
+      v-show="selectedChecks.length !== 0"
+      :disabled="buttonsDisabled"
+      :class="{ disabled: buttonsDisabled }"
+      @click="
+        buttonsDisabled
+          ? disabledButtonsNotification()
+          : applySuggestions(selectedChecks)
+      "
+      type="submit"
+      :text="`Apply ${selectedChecks.length} suggestions`"
+    />
     <UiSpinner v-if="isLoadingConfigs" />
   </div>
 
   <template v-if="configChecks.length !== 0">
+    <span
+      >Suggestion list is automatically refreshed after applying any
+      suggestions</span
+    >
     <UiCollapsible ref="collapsibleSuggestions" :isSuggestions="true">
       <template #title>
         <span v-text="`Suggestions (${suggestions.length})`" />
@@ -64,6 +80,12 @@
                     v-text="`${suggestion.SuggestedValue} ${suggestion.Unit}`"
                   />
                 </div>
+                <input
+                  type="checkbox"
+                  :id="suggestion.Name"
+                  v-model="selectedChecks"
+                  :value="suggestion"
+                />
                 <UiButton
                   :disabled="buttonsDisabled"
                   :class="{ disabled: buttonsDisabled }"
@@ -178,6 +200,7 @@ const notificationContainer = ref<UiNotificationContainer | null>(null);
 
 // Data to be displayed
 const configChecks = ref<ResourceConfigPascalCase[]>([]);
+const selectedChecks = ref<ResourceConfigPascalCase[]>([]);
 
 const isLoadingConfigs = ref<boolean>(false);
 
@@ -205,12 +228,12 @@ async function getSuggestions() {
     );
 
     configChecks.value = data as unknown as ResourceConfigPascalCase[];
-    isLoadingConfigs.value = false;
   } catch (error) {
     configChecks.value = [];
-    isLoadingConfigs.value = false;
     displayError(notificationContainer, error);
   }
+  isLoadingConfigs.value = false;
+  selectedChecks.value = [];
 }
 
 async function applySuggestions(suggestions: ResourceConfigPascalCase[]) {
