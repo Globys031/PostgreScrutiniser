@@ -16,6 +16,3 @@ done
 # Get rid of redundant files
 rm index.ts git_push.sh .gitignore .npmignore .openapi-generator-ignore
 rm -r .openapi-generator
-
-# Insert BASE_PATH. TO DO: use .env files to determine what the remote host is
-sed -i 's/localhost:8080/192.168.56.102:9090/' base.ts

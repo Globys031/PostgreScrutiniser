@@ -5,6 +5,16 @@
       <p>
         <input
           type="text"
+          id="hostname"
+          name="hostname"
+          placeholder="Hostname or IP address"
+          v-model="hostname"
+          required
+        /><i class="validation"><span></span><span></span></i>
+      </p>
+      <p>
+        <input
+          type="text"
           id="username"
           name="username"
           placeholder="Username"
@@ -43,6 +53,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import axios from "axios";
+import { Configuration } from "@/openapi/configuration";
 import { useRouter } from "vue-router";
 import { useSessionStore } from "@/stores/session";
 import { AuthApiFp } from "@/openapi/api/auth";
@@ -51,16 +62,24 @@ import type { ErrorMessage } from "@/openapi/api/auth";
 
 const sessionStore = useSessionStore();
 const router = useRouter();
-const postLogin = AuthApiFp().postLogin;
 
 const username = ref<string>("");
 const password = ref<string>("");
+const hostname = ref<string>("");
 const apiResponse = ref<string>(""); // login request response message
 const gotError = ref<boolean>(false);
 
 const isLoading = ref<boolean>(false);
 
 async function submitForm() {
+  // use the hostname value provided by the login form for api requests
+  sessionStore.hostname = hostname.value;
+  const postLogin = AuthApiFp(
+    new Configuration({
+      basePath: sessionStore.baseAPIPath,
+    })
+  ).postLogin;
+
   try {
     isLoading.value = true;
 

@@ -59,8 +59,7 @@
         <div class="profile-details">
           <div class>
             <div class="username" v-text="sessionStore.username" />
-            <div class="hostname" v-text="hostname" />
-            <!-- <div class="hostname">examplehostname.com</div> -->
+            <div class="hostname" v-text="sessionStore.hostname" />
           </div>
         </div>
         <IconBxLogOut id="log_out" @click="logout()" />
@@ -80,13 +79,11 @@ import {
   IconBxFolder,
   IconBxReceipt,
 } from "@iconify-prerendered/vue-bx";
-import { useSessionStore } from "../stores/session";
+import { useSessionStore } from "@/stores/session";
 import { useRouter } from "vue-router";
 
 const sessionStore = useSessionStore();
 const router = useRouter();
-
-const hostname = import.meta.env.VITE_BACKEND_HOSTNAME;
 
 const isOpen = ref<boolean>(false);
 

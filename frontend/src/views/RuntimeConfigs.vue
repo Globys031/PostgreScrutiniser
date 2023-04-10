@@ -186,6 +186,7 @@ const modal = useModal();
 
 const resourceApi = ResourceApiFp(
   new Configuration({
+    basePath: sessionStore.baseAPIPath, // cia dar ir port reikia
     accessToken: sessionStore.token,
   })
 );

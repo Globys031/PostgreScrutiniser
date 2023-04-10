@@ -8,12 +8,15 @@ import { ref } from "vue";
 import SwaggerUI from "swagger-ui";
 import "swagger-ui/dist/swagger-ui.css";
 import axios from "axios";
+import { useSessionStore } from "@/stores/session";
 import type { openapiSpec } from "@/types/spec";
 
+const sessionStore = useSessionStore();
+
 const urls = [
-  `http://${import.meta.env.VITE_BACKEND_HOST}/api/docs/auth`,
-  `http://${import.meta.env.VITE_BACKEND_HOST}/api/docs/file`,
-  `http://${import.meta.env.VITE_BACKEND_HOST}/api/docs/resource-config`,
+  `${sessionStore.baseAPIPath}/docs/auth`,
+  `${sessionStore.baseAPIPath}/docs/file`,
+  `${sessionStore.baseAPIPath}/docs/resource-config`,
 ];
 
 const isLoading = ref<boolean>(true);
@@ -24,14 +27,19 @@ const isLoading = ref<boolean>(true);
   SwaggerUI({
     dom_id: "#swagger-ui",
     spec: mergedSpec,
+    requestInterceptor: (request: any) => {
+      request.headers.Authorization = `Bearer ${sessionStore.token}`;
+      return request;
+    },
   });
+
   isLoading.value = false;
 })();
 
 // function for merging multiple openapi specifiations
 function mergeSpecs(specs: Array<openapiSpec>) {
   const mergedSpec = {
-    servers: [{ url: `http://${import.meta.env.VITE_BACKEND_HOST}/api` }],
+    servers: [{ url: `${sessionStore.baseAPIPath}` }],
     components: {
       schemas: {},
     },

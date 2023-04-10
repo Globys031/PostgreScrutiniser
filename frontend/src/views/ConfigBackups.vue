@@ -112,6 +112,7 @@ const modal = useModal();
 
 const backupApi = BackupApiFp(
   new Configuration({
+    basePath: sessionStore.baseAPIPath,
     accessToken: sessionStore.token,
   })
 );
