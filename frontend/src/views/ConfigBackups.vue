@@ -151,7 +151,7 @@ async function getBackups() {
       "Backups will be displayed on the screeen"
     );
 
-    backups.value = data as unknown as BackupFile[];
+    backups.value = (data as unknown as BackupFile[]).reverse();
   } catch (error) {
     backups.value = [];
     isLoadingList.value = false;
