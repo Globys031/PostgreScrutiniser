@@ -60,7 +60,7 @@
           @resize="setChildSize(collapsibleSuggestions)"
         >
           <template #title>
-            <span v-text="suggestion.Name" />
+            <span v-text="getSuggestionTitle(suggestion)" />
           </template>
 
           <template #content>
@@ -285,6 +285,14 @@ function refreshChecks() {
   getSuggestions();
   setChildSize(collapsibleSuggestions.value);
   setChildSize(collapsiblePassedChecks.value);
+}
+
+function getSuggestionTitle(suggestion: ResourceConfigPascalCase) {
+  const suggestedValuePart = suggestion.Unit
+    ? `(${suggestion.SuggestedValue} ${suggestion.Unit})`
+    : `(${suggestion.SuggestedValue})`;
+
+  return `${suggestion.Name} ${suggestedValuePart}`;
 }
 
 // After `UiCollapsibleItem` is resized, resize `UiCollapsible` as well

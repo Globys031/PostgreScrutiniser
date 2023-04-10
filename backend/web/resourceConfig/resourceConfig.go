@@ -119,11 +119,8 @@ func getPGSettings(dbHandler *sql.DB, logger *utils.Logger) (map[string]Resource
 			return nil, err
 		}
 
-		// Use regexp.MatchString to check if row contains one of the ResourceSettings
 		for _, resource := range ResourceSettings {
-			match, _ := regexp.MatchString(resource, name.String)
-			if match {
-				// If the line contains a ResourceSetting, store the name and setting in the map
+			if resource == name.String {
 				resSetting := ResourceSetting{
 					Name:     name.String,     // name of the setting
 					Value:    setting.String,  // value of the setting
@@ -209,6 +206,7 @@ func (conf *Configuration) CheckSharedBuffers(logger *utils.Logger) (*ResourceSe
 	var lowestRecommendedValue float32 = 128 // Cannot suggest value that is lower than 128MB
 	var GigabyteInBytes uint64 = 1073741824  // 1GB
 	sharedBuffers := conf.settings["shared_buffers"]
+	sharedBuffers.Details = "This setting sets the amount of memory the database server uses for shared memory buffers. "
 
 	// 1. Get total server memory
 	totalMemory, err := utils.GetTotalMemory()
@@ -232,7 +230,7 @@ func (conf *Configuration) CheckSharedBuffers(logger *utils.Logger) (*ResourceSe
 	// If total server memory > 1GB, suggest 25% of total server RAM
 	if totalMemory > GigabyteInBytes {
 		suggestion = totalMemoryConverted * 0.25
-		sharedBuffers.Details = "Total server memory > 1GB. Suggest using 25% of total server RAM"
+		sharedBuffers.Details += "Current total server memory is more than 1GB. Suggestion is to use 25% of total server RAM"
 	} else { // Else suggest 30% of what memory is currently available on the server
 		availableMemory, err := utils.GetAvailableMemory()
 		if err != nil {
@@ -248,7 +246,7 @@ func (conf *Configuration) CheckSharedBuffers(logger *utils.Logger) (*ResourceSe
 			return nil, err
 		}
 		suggestion = availableMemoryConverted * 0.30
-		sharedBuffers.Details = "Total server memory < 1GB. Suggest using 30% of available RAM"
+		sharedBuffers.Details += "Current total server memory is less than 1GB. Suggestion is to use 30% of available RAM"
 
 		// Suggested value cannot be lower than 128MB
 		lowestRecommendedValueAsString := utils.Float32ToString(lowestRecommendedValue)
@@ -260,7 +258,7 @@ func (conf *Configuration) CheckSharedBuffers(logger *utils.Logger) (*ResourceSe
 		}
 		if suggestion < lowestRecommendedValue {
 			suggestion = lowestRecommendedValue
-			sharedBuffers.Details = "Server lacks available memory. Lowest recommended value is 128MB"
+			sharedBuffers.Details += "Server lacks available memory. Suggestion is to use the lowest recommended value (which is 128MB)"
 		}
 	}
 
@@ -274,6 +272,7 @@ func (conf *Configuration) CheckSharedBuffers(logger *utils.Logger) (*ResourceSe
 
 func (conf *Configuration) CheckHugePages(logger *utils.Logger) (*ResourceSetting, error) {
 	hugePages := conf.settings["huge_pages"]
+	hugePages.Details = "This setting controls whether huge pages are requested for the main shared memory area. "
 
 	// Get nr_hugepages value
 	kernelPagesString, err := sysctl.Get("vm.nr_hugepages")
@@ -286,7 +285,7 @@ func (conf *Configuration) CheckHugePages(logger *utils.Logger) (*ResourceSettin
 
 	// if it's not set in kernel, no point in having hugePages set to on/try
 	if kernelNrHugePages == 0 {
-		hugePages.Details = "Kernel parameter nr_hugepages is set to 0. Because of that, PostgreSQL cannot request huge pages"
+		hugePages.Details += "System's kernel parameter nr_hugepages is set to 0. Because of that, PostgreSQL cannot request huge pages. Suggestion is to turn off hugePages in postgresql configuration as well."
 		setEnumTypeSuggestedValue(&hugePages, "off")
 
 		resetSuggestionIfEqual(&hugePages)
@@ -295,10 +294,10 @@ func (conf *Configuration) CheckHugePages(logger *utils.Logger) (*ResourceSettin
 	}
 
 	if hugePages.Value == "on" {
-		hugePages.Details = "huge_pages current value is equal to 'on'. Failure to request huge pages will prevent the server from starting up"
+		hugePages.Details += "Postgresql's configuration parameter \"huge_pages\" current value is equal to 'on'. In case requesting huge pages results in failure, it will prevent the server from starting up. Suggestion is to use the \"try\" option. With huge_pages set to try, the server will try to request huge pages, but fall back to the default if that fails."
 		setEnumTypeSuggestedValue(&hugePages, "try")
 	} else if hugePages.Value == "off" {
-		hugePages.Details = "huge_pages current value is equal to 'off'. Use of huge pages results in smaller page tables and less CPU time spent on memory management, increasing performance"
+		hugePages.Details += "Postgresql's configuration parameter \"huge_pages\" current value is equal to 'off'. Usage of huge pages results in smaller page tables and less CPU time spent on memory management, resulting in increased performance. Suggestion is to use the \"try\" option so that huge_pages are turned on but can fallback in case of failure using them."
 		setEnumTypeSuggestedValue(&hugePages, "try")
 	}
 
@@ -310,6 +309,7 @@ func (conf *Configuration) CheckHugePages(logger *utils.Logger) (*ResourceSettin
 
 func (conf *Configuration) CheckHugePageSize(logger *utils.Logger) (*ResourceSetting, error) {
 	hugePageSize := conf.settings["huge_page_size"]
+	hugePageSize.Details = "This setting controls the size of huge pages, when they are enabled with huge_pages. "
 
 	// Get nr_hugepages value
 	kernelPagesString, err := sysctl.Get("vm.nr_hugepages")
@@ -327,12 +327,13 @@ func (conf *Configuration) CheckHugePageSize(logger *utils.Logger) (*ResourceSet
 
 	// If vm.nr_hugepages is 0, then huge_page_size cannot be set
 	if kernelNrHugePages == 0 {
+		conf.settings["huge_page_size"] = hugePageSize
 		return &hugePageSize, nil
 	}
 
 	if hugePageSize.Value != "0" {
 		hugePageSize.SuggestedValue = "0"
-		hugePageSize.Details = "Current huge_page_size value is set to a non 0 value. To prevent fragmentation, the same huge page size as the one set in your Linux kernel should be used. When set to 0, the default huge page size on the system will be used."
+		hugePageSize.Details += "Current PostgreSQL configuration parameter \"huge_page_size\" value is set to a non 0 value. To prevent fragmentation, the same huge page size as the one set in your Linux kernel should be used. When set to 0, the default huge page size on the system will be used. Suggestion is to set \"huge_page_size\" to 0."
 	}
 
 	resetSuggestionIfEqual(&hugePageSize)
@@ -343,6 +344,7 @@ func (conf *Configuration) CheckHugePageSize(logger *utils.Logger) (*ResourceSet
 // GENERALREC
 func (conf *Configuration) CheckTempBuffers(logger *utils.Logger) (*ResourceSetting, error) {
 	tempBuffers := conf.settings["temp_buffers"]
+	tempBuffers.Details = "This setting sets the maximum amount of memory used for temporary buffers within each database session. These are session-local buffers used only for access to temporary tables. "
 
 	currentValue, err := utils.StringToUint64(tempBuffers.Value)
 	if err != nil {
@@ -358,9 +360,9 @@ func (conf *Configuration) CheckTempBuffers(logger *utils.Logger) (*ResourceSett
 		return nil, err
 	}
 	if currentValueConverted > 1024 { // 1024 8kB is equivalent to 8MB
-		tempBuffers.Details = "Current temp_buffers value is set to more than 8MB. If there are multiple databases used by different application, consider changing this setting per database. It is recommended to increase this value only for applications that rely heavily on temporary tables"
+		tempBuffers.Details += "Current PostgreSQL configuration parameter \"temp_buffers\" value is set to more than 8MB. If there are multiple databases used by different applications, consider changing this setting per database. It is recommended to increase this value only for applications that rely heavily on temporary tables. Suggestion is to increase this only if the application relies heavily on temporary tables."
 	} else if currentValueConverted < 1024 {
-		tempBuffers.Details = "Current temp_buffers value is set to less than 8MB. The cost of setting a large value in sessions that do not actually need many temporary buffers is only a buffer descriptor, or about 64 bytes. Consider increasing this to the recommended default value"
+		tempBuffers.Details += "Current PostgreSQL configuration parameter \"temp_buffers\" value is set to less than 8MB. The cost of setting a large value in sessions that do not actually need many temporary buffers is only a buffer descriptor, or about 64 bytes. Suggestion is to increase this to the recommended default value."
 
 		convertedDefault, err := utils.ConvertBasedOnUnit("1024", "8kB", tempBuffers.Unit)
 		if err != nil {
@@ -379,6 +381,7 @@ func (conf *Configuration) CheckTempBuffers(logger *utils.Logger) (*ResourceSett
 // GENERALREC
 func (conf *Configuration) CheckMaxPreparedTransactions(logger *utils.Logger) (*ResourceSetting, error) {
 	maxPreparedTransactions := conf.settings["max_prepared_transactions"]
+	maxPreparedTransactions.Details = "This setting sets the maximum number of transactions that can be in the \"prepared\" state simultaneously. "
 
 	// !!! consider passing this as an argument because there are currently two
 	// separate functions that ask for max_connections
@@ -390,7 +393,7 @@ func (conf *Configuration) CheckMaxPreparedTransactions(logger *utils.Logger) (*
 	}
 
 	if maxPreparedTransactions.Value == "0" {
-		maxPreparedTransactions.Details = " If you are using prepared transactions, you will probably want max_prepared_transactions to be at least as large as max_connections, so that every session can have a prepared transaction pending."
+		maxPreparedTransactions.Details += "Current PostgreSQL configuration parameter \"max_prepared_transactions\" value is set to 0. If you are using prepared transactions, you will probably want max_prepared_transactions to be at least as large as another another configuration parameter \"max_connections\", so that every session can have a prepared transaction pending. Suggestion is to set \"max_prepared_transactions\" to the same value as \"max_connections\"."
 		maxPreparedTransactions.SuggestedValue = maxConnections.Value
 	}
 
@@ -401,6 +404,7 @@ func (conf *Configuration) CheckMaxPreparedTransactions(logger *utils.Logger) (*
 
 func (conf *Configuration) CheckWorkMem(logger *utils.Logger) (*ResourceSetting, error) {
 	workMem := conf.settings["work_mem"]
+	workMem.Details = "This setting sets the base maximum amount of memory to be used by a query operation (such as a sort or hash table) before writing to temporary disk files. "
 
 	// 1. Get amount of available memory and connections
 	availableMemory, err := utils.GetAvailableMemory()
@@ -428,7 +432,7 @@ func (conf *Configuration) CheckWorkMem(logger *utils.Logger) (*ResourceSetting,
 	workMem.SuggestedValue = utils.Float32ToString(suggestionAsWorkMemUnit)
 
 	// 3. Add details for decision
-	workMem.Details = "Suggested value is based on currently available memory on the server divided by max_connections. If using complex queries that involve sorts or hash tables, consider using double this value. It can also be set higher if this server is a dedicated database server and there is no concern that other software will run out of memory."
+	workMem.Details += "Suggested value is based on currently available memory on the server divided by another configuration parameter \"max_connections\". If using complex queries that involve sorts or hash tables, consider using double this value. It can also be set higher if this server is a dedicated database server and there is no concern that other software will run out of memory."
 
 	resetSuggestionIfEqual(&workMem)
 	conf.settings["work_mem"] = workMem
@@ -438,6 +442,8 @@ func (conf *Configuration) CheckWorkMem(logger *utils.Logger) (*ResourceSetting,
 // GENERALREC
 func (conf *Configuration) CheckHashMemMultiplier(logger *utils.Logger) (*ResourceSetting, error) {
 	hashMemMultiplier := conf.settings["hash_mem_multiplier"]
+	hashMemMultiplier.Details = "This setting is used to compute the maximum amount of memory that hash-based operations can use. "
+
 	workMem := conf.settings["work_mem"]
 	workMemValueAsMB, err := utils.ConvertBasedOnUnit(workMem.Value, workMem.Unit, "MB")
 	if err != nil {
@@ -458,10 +464,10 @@ func (conf *Configuration) CheckHashMemMultiplier(logger *utils.Logger) (*Resour
 		if suggestion > 8 {
 			suggestion = 8
 		}
-		hashMemMultiplier.Details = "Generally default value works best. If your application uses hash-based operations and PostgreSQL often ends up spilling (creates workfiles on disk to compensate for lack of memory), consider increasing this further. Suggested value is based on how much working memory is currently set."
+		hashMemMultiplier.Details += "\"hash_mem_multiplier\" recommendations depend on \"work_mem\". Often times, it is best to set \"hash_mem_multiplier\" to its default value. If your application uses hash-based operations and PostgreSQL often ends up spilling (creates workfiles on disk to compensate for lack of memory), it should be increased further. However, current PostgreSQL configuration parameter \"work_mem\" is set to more than 40MB, allowing to increase this further. Suggestion here is based on how much working memory is currently set."
 		hashMemMultiplier.SuggestedValue = utils.Float32ToString(suggestion)
 	} else if hashMemMultiplier.Value != "2" {
-		hashMemMultiplier.Details = "Generally default value works best. If your application uses hash-based operations and PostgreSQL often ends up spilling (creates workfiles on disk to compensate for lack of memory), consider increasing this after having increased work_mem above 40MB."
+		hashMemMultiplier.Details += "\"hash_mem_multiplier\" recommendations depend on \"work_mem\". Because \"work_mem\" is set to less than 40MB, \"hash_mem_multiplier\" should not be set higher than the default. Generally default value works best. If your application uses hash-based operations and PostgreSQL often ends up spilling (creates workfiles on disk to compensate for lack of memory), consider increasing this after having increased work_mem above 40MB."
 		hashMemMultiplier.SuggestedValue = "2"
 	}
 
@@ -473,6 +479,8 @@ func (conf *Configuration) CheckHashMemMultiplier(logger *utils.Logger) (*Resour
 func (conf *Configuration) CheckMaintenanceWorkMem(logger *utils.Logger) (*ResourceSetting, error) {
 	// 1. Get maintenance_work_mem, autovacumm_max_workers and available memory on server
 	maintenanceWorkMem := conf.settings["maintenance_work_mem"]
+	maintenanceWorkMem.Details = "This setting specifies the maximum amount of memory to be used by maintenance operations, such as VACUUM, CREATE INDEX, and ALTER TABLE ADD FOREIGN KEY. "
+
 	autovacuumMaxWorkers, availableMem, err := conf.getWorkMemRelatedValues(logger, &maintenanceWorkMem)
 	if err != nil {
 		logger.LogError(fmt.Errorf("failed maintenance_work_mem check: %v", err))
@@ -484,7 +492,7 @@ func (conf *Configuration) CheckMaintenanceWorkMem(logger *utils.Logger) (*Resou
 	suggestion := availableMem / 8 / autovacuumMaxWorkers
 	suggestionRounded := utils.RoundToPowerOf2(uint64(suggestion))
 
-	maintenanceWorkMem.Details = fmt.Sprintf("This suggestion was made by dividing current available memory(%.2f%s) by 8 and by how many autovacuum_max_workers(%.0f) are set. Applications that heavily rely on maintenance operations, such as VACUUM, CREATE INDEX, and ALTER TABLE ADD FOREIGN KEY may want to increase this further by multiplying the suggested value by 2", availableMem, maintenanceWorkMem.Unit, autovacuumMaxWorkers)
+	maintenanceWorkMem.Details += fmt.Sprintf("This suggestion was made by dividing current available memory(%.2f%s) by 8 and by how many autovacuum_max_workers(%.0f) are set. Applications that heavily rely on maintenance operations, such as VACUUM, CREATE INDEX, and ALTER TABLE ADD FOREIGN KEY may want to increase this further by multiplying the suggested value by 2.", availableMem, maintenanceWorkMem.Unit, autovacuumMaxWorkers)
 	maintenanceWorkMem.SuggestedValue = utils.Uint64ToString(suggestionRounded)
 
 	// 3. If suggestion is below default value and current value is not equal to default,
@@ -505,7 +513,7 @@ func (conf *Configuration) CheckMaintenanceWorkMem(logger *utils.Logger) (*Resou
 			return nil, err
 		}
 		if maintenanceWorkMemAsMB != 64 {
-			maintenanceWorkMem.Details = "Currently there is not enough available memory on the server to go above default maintenance_work_mem value"
+			maintenanceWorkMem.Details += "Currently there is not enough available memory on the server to go above default maintenance_work_mem value. Suggestion is to set this setting to the default value."
 			defaultAsUnit, err := utils.ConvertBasedOnUnit("64", "MB", maintenanceWorkMem.Unit)
 			if err != nil {
 				logger.LogError(fmt.Errorf("Failed maintenance_work_mem check: %v", err))
@@ -514,7 +522,6 @@ func (conf *Configuration) CheckMaintenanceWorkMem(logger *utils.Logger) (*Resou
 			}
 			maintenanceWorkMem.SuggestedValue = utils.Float32ToString(defaultAsUnit)
 		} else { // if suggestion was below default and current value is already set to default
-			maintenanceWorkMem.Details = ""
 			maintenanceWorkMem.SuggestedValue = ""
 		}
 	}
@@ -527,6 +534,8 @@ func (conf *Configuration) CheckMaintenanceWorkMem(logger *utils.Logger) (*Resou
 func (conf *Configuration) CheckAutovacuumWorkMem(logger *utils.Logger) (*ResourceSetting, error) {
 	// 1. Get autovacuum_work_mem, autovacumm_max_workers and available memory on server
 	autovacuumWorkMem := conf.settings["autovacuum_work_mem"]
+	autovacuumWorkMem.Details = "This setting specifies the maximum amount of memory to be used by each autovacuum worker process. "
+
 	autovacuumMaxWorkers, availableMem, err := conf.getWorkMemRelatedValues(logger, &autovacuumWorkMem)
 	if err != nil {
 		logger.LogError(fmt.Errorf("Failed autovacuum_work_mem check: %v", err))
@@ -538,7 +547,7 @@ func (conf *Configuration) CheckAutovacuumWorkMem(logger *utils.Logger) (*Resour
 	suggestion := availableMem / 4 / autovacuumMaxWorkers
 	suggestionRounded := utils.RoundToPowerOf2(uint64(suggestion))
 
-	autovacuumWorkMem.Details = fmt.Sprintf("This suggestion was made by dividing current available memory(%.2f%s) by 4 and by how many autovacuum_max_workers(%.0f) are set", availableMem, autovacuumWorkMem.Unit, autovacuumMaxWorkers)
+	autovacuumWorkMem.Details += fmt.Sprintf("This suggestion was made by dividing current available memory(%.2f%s) by 4 and by how many autovacuum_max_workers(%.0f) are set", availableMem, autovacuumWorkMem.Unit, autovacuumMaxWorkers)
 	autovacuumWorkMem.SuggestedValue = utils.Uint64ToString(suggestionRounded)
 
 	// 3. If suggestion is below default of maintenance_work_mem value
@@ -558,10 +567,9 @@ func (conf *Configuration) CheckAutovacuumWorkMem(logger *utils.Logger) (*Resour
 			autovacuumWorkMem.GotError = true
 			return nil, err
 		}
-		autovacuumWorkMem.Details = "Currently there is not enough available memory on the server to go above default autovacuum_work_mem value. Suggesting setting to -1 to rely on maintenance_work_mem instead"
+		autovacuumWorkMem.Details += "Currently there is not enough available memory on the server to go above default autovacuum_work_mem value. Suggestion is to set this setting -1 so it will rely on another configuration parameter (\"maintenance_work_mem\") instead."
 		autovacuumWorkMem.SuggestedValue = utils.Float32ToString(defaultAsUnit)
 	} else if suggestionAsMB < 64 { // if already set to -1, don't suggest anything
-		autovacuumWorkMem.Details = ""
 		autovacuumWorkMem.SuggestedValue = ""
 	}
 
@@ -607,6 +615,7 @@ func (conf *Configuration) getWorkMemRelatedValues(logger *utils.Logger, setting
 
 func (conf *Configuration) ChecklogicalDecodingWorkMem(logger *utils.Logger) (*ResourceSetting, error) {
 	logicalDecodingWorkMem := conf.settings["logical_decoding_work_mem"]
+	logicalDecodingWorkMem.Details = "This setting specifies the maximum amount of memory to be used by logical decoding, before some of the decoded changes are written to local disk. "
 
 	// 1. Get available memory on server
 	availableMemory, err := utils.GetAvailableMemory()
@@ -636,7 +645,7 @@ func (conf *Configuration) ChecklogicalDecodingWorkMem(logger *utils.Logger) (*R
 	}
 
 	if !(suggestionAsMB < 64) {
-		logicalDecodingWorkMem.Details = fmt.Sprintf("This suggestion was made by dividing current available memory(%.2f) by 8", availableMemoryConverted)
+		logicalDecodingWorkMem.Details += fmt.Sprintf("There is enough available memory on the server to increase this setting further than the default. Suggestion is to set this to the value calculated after dividing current available memory(%.2f) by 8", availableMemoryConverted)
 		logicalDecodingWorkMem.SuggestedValue = utils.Uint64ToString(suggestionRounded)
 	}
 
@@ -647,6 +656,7 @@ func (conf *Configuration) ChecklogicalDecodingWorkMem(logger *utils.Logger) (*R
 
 func (conf *Configuration) CheckMaxStackDepth(logger *utils.Logger) (*ResourceSetting, error) {
 	maxStackDepth := conf.settings["max_stack_depth"]
+	maxStackDepth.Details = "This setting specifies the maximum safe depth of the server's execution stack. "
 
 	// 1. Get system stack depth
 	systemStackDepth, err := utils.GetStackSize()
@@ -673,7 +683,7 @@ func (conf *Configuration) CheckMaxStackDepth(logger *utils.Logger) (*ResourceSe
 
 	if systemStackDepthAsUnit != maxStackDepthFloat32 {
 		maxStackDepth.SuggestedValue = utils.Float32ToString(systemStackDepthAsUnit)
-		maxStackDepth.Details = "The ideal setting for this parameter is the actual stack size limit enforced by the kernel (as set by ulimit -s or local equivalent)."
+		maxStackDepth.Details += "The ideal setting for this parameter is the actual stack size limit enforced by the kernel (as set by ulimit -s or local equivalent). Suggestion is to set this to the kernel stack size limit"
 	}
 
 	/* For whatever reason, it's impossible to apply 8192 maxStackDepth value on the system I tested with.
@@ -693,10 +703,10 @@ func (conf *Configuration) CheckMaxStackDepth(logger *utils.Logger) (*ResourceSe
 
 func (conf *Configuration) CheckSharedMemoryType(logger *utils.Logger) (*ResourceSetting, error) {
 	sharedMemoryType := conf.settings["shared_memory_type"]
+	sharedMemoryType.Details = "This setting specifies the shared memory implementation that the server should use for the main shared memory region that holds PostgreSQL's shared buffers and other shared data. "
 
 	// Suggest boot_val (default) value
-
-	details := "sysv option is discouraged because it typically requires non-default kernel settings to allow for large allocations"
+	details := "sysv option is discouraged because it typically requires non-default kernel settings to allow for large allocations. Suggestion is to set this to the default."
 	err := suggestDefault(&sharedMemoryType, details)
 	if err != nil {
 		logger.LogError(fmt.Errorf("failed shared_memory_type check: %v", err))
@@ -711,9 +721,10 @@ func (conf *Configuration) CheckSharedMemoryType(logger *utils.Logger) (*Resourc
 
 func (conf *Configuration) CheckDynamicSharedMemoryType(logger *utils.Logger) (*ResourceSetting, error) {
 	dynamicSharedMemoryType := conf.settings["dynamic_shared_memory_type"]
+	dynamicSharedMemoryType.Details = "This setting specifies the dynamic shared memory implementation that the server should use. "
 
 	// Suggest boot_val (default) value
-	details := "Typically default value is best for this option"
+	details := "Typically default value is best for this option. Suggestion is to set this to the default"
 	err := suggestDefault(&dynamicSharedMemoryType, details)
 	if err != nil {
 		logger.LogError(fmt.Errorf("failed dynamic_shared_memory_type check: %v", err))
@@ -750,7 +761,7 @@ func suggestDefault(setting *ResourceSetting, details string) error {
 	// 2. Suggest boot_val (default) if not already set to that
 	if setting.Value != bootVal {
 		setting.SuggestedValue = bootVal
-		setting.Details = details
+		setting.Details += details
 	}
 
 	return nil
