@@ -36,4 +36,35 @@
 //   }
 // }
 
+import { loginDetails } from "../auth";
+
+Cypress.Commands.add("login", () => {
+  cy.session(
+    "loginID",
+    () => {
+      cy.visit("/login");
+
+      cy.get("#hostname").type(loginDetails.server);
+      cy.get("#username").type(loginDetails.username);
+      cy.get("#password").type(loginDetails.password);
+
+      cy.get("#login").click();
+      cy.get("#log_out").should("be.visible");
+    },
+    {
+      validate: () => {
+        expect(localStorage.token).to.exist;
+      },
+    }
+  );
+});
+
+declare global {
+  namespace Cypress {
+    interface Chainable {
+      login(): Chainable<void>;
+    }
+  }
+}
+
 export {};

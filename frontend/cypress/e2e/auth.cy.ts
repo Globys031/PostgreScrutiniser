@@ -1,17 +1,17 @@
-const appUser = {
-  server: Cypress.env("CYPRESS_SERVER"),
-  username: Cypress.env("CYPRESS_USERNAME"),
-  password: Cypress.env("CYPRESS_PASSWORD"),
-};
+import { loginDetails } from "../auth";
+
+beforeEach(() => {
+  cy.visit("/login");
+});
 
 describe("Login view", () => {
   it("successful 'login' navigates to home page", () => {
     cy.visit("/login");
 
     // Enter valid login details
-    cy.get("#hostname").type(appUser.server);
-    cy.get("#username").type(appUser.username);
-    cy.get("#password").type(appUser.password);
+    cy.get("#hostname").type(loginDetails.server);
+    cy.get("#username").type(loginDetails.username);
+    cy.get("#password").type(loginDetails.password);
 
     cy.get("#login").click();
 
@@ -22,24 +22,20 @@ describe("Login view", () => {
   });
 
   it("successful 'login' displays logout button", () => {
-    cy.visit("/login");
-
     // Enter valid login details
-    cy.get("#hostname").type(appUser.server);
-    cy.get("#username").type(appUser.username);
-    cy.get("#password").type(appUser.password);
+    cy.get("#hostname").type(loginDetails.server);
+    cy.get("#username").type(loginDetails.username);
+    cy.get("#password").type(loginDetails.password);
 
     cy.get("#login").click();
     cy.get("#log_out").should("be.visible");
   });
 
   it("incorrect name gives authentication error", () => {
-    cy.visit("/login"); // Visit the login page
-
     // Enter only an invalid username
-    cy.get("#hostname").type(appUser.server);
+    cy.get("#hostname").type(loginDetails.server);
     cy.get("#username").type("user1234");
-    cy.get("#password").type(appUser.password);
+    cy.get("#password").type(loginDetails.password);
 
     cy.get("#login").click();
     cy.get(".error-msg").should(
@@ -49,11 +45,9 @@ describe("Login view", () => {
   });
 
   it("incorrect password gives authentication error", () => {
-    cy.visit("/login");
-
     // Enter only an invalid password
-    cy.get("#hostname").type(appUser.server);
-    cy.get("#username").type(appUser.username);
+    cy.get("#hostname").type(loginDetails.server);
+    cy.get("#username").type(loginDetails.username);
     cy.get("#password").type("password1234");
 
     cy.get("#login").click();
@@ -61,12 +55,10 @@ describe("Login view", () => {
   });
 
   it("incorrect server gives authentication network error", () => {
-    cy.visit("/login");
-
     // Enter only an invalid password
     cy.get("#hostname").type("example.hostname.com");
-    cy.get("#username").type(appUser.username);
-    cy.get("#password").type(appUser.password);
+    cy.get("#username").type(loginDetails.username);
+    cy.get("#password").type(loginDetails.password);
 
     cy.get("#login").click();
     cy.get(".error-msg").should("be.visible");
