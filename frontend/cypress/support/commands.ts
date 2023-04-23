@@ -36,9 +36,9 @@
 //   }
 // }
 
-import { loginDetails } from "../auth";
+import { loginDetails } from "../utils";
 
-Cypress.Commands.add("login", () => {
+const login = () => {
   cy.session(
     "loginID",
     () => {
@@ -57,12 +57,28 @@ Cypress.Commands.add("login", () => {
       },
     }
   );
+}
+
+const resetConfigs = () => {
+  cy.request({
+    method: "DELETE",
+    url: `http://${loginDetails.server}:${loginDetails.port}/api/resource`,
+    headers: {
+      Authorization: `Bearer ${localStorage.token}`,
+    },
+  });
+};
+
+Cypress.Commands.addAll({
+  login,
+  resetConfigs,
 });
 
 declare global {
   namespace Cypress {
     interface Chainable {
       login(): Chainable<void>;
+      resetConfigs(): Chainable<void>;
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "extends": "@vue/tsconfig/tsconfig.web.json",
-  "include": ["./**/*", "../support/**/*", "../auth.ts"],
+  "include": ["./**/*", "../support/**/*", "../utils.ts"],
   "compilerOptions": {
     "isolatedModules": false,
     "target": "es5",

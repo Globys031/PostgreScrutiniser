@@ -1,8 +1,5 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
-import { loginDetails } from "../auth";
-
-// Wait 3 seconds to avoid crashing PostgreSQL instance
-const waitForPostgresql = 3000;
+import { waitForPostgresql } from "../utils";
 
 describe("RuntimeConfigs view", () => {
   beforeEach(() => {
@@ -12,15 +9,9 @@ describe("RuntimeConfigs view", () => {
       `cacheAcrossSpecs` options
     **/
     cy.login().then(() => {
-      cy.request({
-        method: "DELETE",
-        url: `http://${loginDetails.server}:${loginDetails.port}/api/resource`,
-        headers: {
-          Authorization: `Bearer ${localStorage.token}`,
-        },
-      });
+      cy.resetConfigs();
+      cy.visit("/configurations");
     });
-    cy.visit("/configurations");
     cy.wait(waitForPostgresql);
   });
 
@@ -31,7 +22,6 @@ describe("RuntimeConfigs view", () => {
   });
 
   it("'Get checks' returns a total of 13 parameters within two collapsible tables", () => {
-    cy.visit("/configurations");
     cy.contains("div", "Get checks").click();
     cy.get("div.content")
       .find("div.collapsible")

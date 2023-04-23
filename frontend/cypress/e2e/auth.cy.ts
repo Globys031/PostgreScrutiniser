@@ -1,4 +1,4 @@
-import { loginDetails } from "../auth";
+import { loginDetails } from "../utils";
 
 beforeEach(() => {
   cy.visit("/login");
