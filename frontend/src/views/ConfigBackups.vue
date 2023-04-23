@@ -174,7 +174,7 @@ async function restoreBackup(backupName: string) {
     displayNotification(
       notificationContainer,
       "success",
-      "Backups has been restored"
+      "Backups have been restored"
     );
 
     // After restoring a backup, get new list of backups and resize table
@@ -215,7 +215,7 @@ async function deleteBackup(backupName: string) {
     displayNotification(
       notificationContainer,
       "success",
-      "Backups has been deleted"
+      "Backups have been deleted"
     );
 
     // After deleting a backup, get new list of backups and resize table
