@@ -2,18 +2,6 @@
 
 This is the backend code for `PostgreScrutiniser`. It follows a basic folder structure [as described here](https://github.com/golang-standards/project-layout) and additionally has a `utils` folder for functions used across the application.
 
-## Dependencies
-
-This project assumes that postgresql is correctly setup and depends on `pg_config` being available in user's path. If `pg_config` is missing, it can be installed on CentOS based systems like so:
-```
-dnf -y install libpq-devel
-```
-Additionally you may have to add postgresql binary to path. For example:
-```
-export PATH="$PATH:/usr/pgsql-15/bin"
-```
-
-
 ## Starting project
 
 ### Backend
