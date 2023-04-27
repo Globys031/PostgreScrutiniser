@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Script for setting up th entirety of our application
+# Script for setting up the backend side of our application
 
-echo "Beginning setup for PostgreScrutiniser.\n"
+echo "Beginning setup for PostgreScrutiniser...\n"
+echo "Note that port 9090 has to be open for the application to be accessible"
 
 # Create necessasry folders and setup our main application user
 mkdir -p /usr/local/postgrescrutiniser/backups/
@@ -37,3 +38,16 @@ chown -R $APPUSER. $HOMEDIR
 chmod 0600 $HOMEDIR/.pgpass
 
 echo "Main PostgreSql database's user credentials saved in: $HOMEDIR/.pgpass"
+
+# Set up backend executable
+echo "Setting up PostgreScrutiniser executable..."
+go build -o postgrescrutiniser
+cp -p postgrescrutiniser /usr/local/postgrescrutiniser/
+cp -p postgrescrutiniser.service /etc/systemd/system
+
+SECRET=$(echo $RANDOM | md5sum | head -c 20)
+echo "BACKEND_PORT=9090" > dev.env
+echo "JWT_SECRET_KEY=${SECRET}" >> dev.env
+mv dev.env /usr/local/postgrescrutiniser/
+
+echo "Setup completed without any errors."

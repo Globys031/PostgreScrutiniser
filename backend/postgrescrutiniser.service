@@ -1,0 +1,13 @@
+[Unit]
+Description=PostgreSQL configuration management system "PostgreScrutiniser"
+After=network.target
+
+[Service]
+User=postgrescrutiniser
+Group=postgrescrutiniser
+Type=simple
+ExecStart=/usr/local/postgrescrutiniser/postgrescrutiniser
+WorkingDirectory=/usr/local/postgrescrutiniser/
+
+[Install]
+WantedBy=multi-user.target
