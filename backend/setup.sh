@@ -6,11 +6,14 @@ echo "Beginning setup for PostgreScrutiniser...\n"
 echo "Note that port 9090 has to be open for the application to be accessible"
 
 # Create necessasry folders and setup our main application user
-mkdir -p /usr/local/postgrescrutiniser/backups/
-mkdir -p /usr/local/postgrescrutiniser/confs/
-
 APPUSER="postgrescrutiniser"
-HOMEDIR="/usr/local/$APPUSER/"
+HOMEDIR="/usr/local/$APPUSER"
+LOGDIR="/var/log/$APPUSER/"
+
+mkdir -p $HOMEDIR/backups/
+mkdir -p $HOMEDIR/confs/
+mkdir -p $LOGDIR
+
 SCRUTINISER_PASSWORD=`date +%s | sha256sum | base64 | head -c 16`
 echo $SCRUTINISER_PASSWORD | passwd --stdin $APPUSER
 useradd -m -d $HOMEDIR $APPUSER
@@ -34,7 +37,10 @@ then
 fi
 
 echo "*:$PORT:*:$POSTGREUSER:$PASSWORD" > $HOMEDIR/.pgpass
+
+# Set up correct permissions for all folders
 chown -R $APPUSER. $HOMEDIR
+chown -R $APPUSER. $LOGDIR
 chmod 0600 $HOMEDIR/.pgpass
 
 echo "Main PostgreSql database's user credentials saved in: $HOMEDIR/.pgpass"

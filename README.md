@@ -25,6 +25,7 @@ After setup is complete, feel free to remove this repository.
 To setup the frontend part of this project, build it for production with:
 ```
 cd frontend/
+npm install
 npm run build
 ```
 
