@@ -248,6 +248,7 @@ async function applySuggestions(suggestions: ResourceConfigPascalCase[]) {
     );
 
     // Execute patch api request
+    disableButtons();
     const patchRequest = await resourceApi.patchResourceConfigs(
       formattedSuggestions as ResourceConfigPatchSchema[]
     );
@@ -258,7 +259,6 @@ async function applySuggestions(suggestions: ResourceConfigPascalCase[]) {
       "Suggestions applied"
     );
     refreshChecks();
-    disableButtons();
   } catch (error) {
     displayError(notificationContainer, error);
     configChecks.value = []; // reset table to empty
@@ -268,13 +268,13 @@ async function applySuggestions(suggestions: ResourceConfigPascalCase[]) {
 async function resetConfigs() {
   console.log("resetConfigs()");
   try {
+    disableButtons();
     const deleteConfigsRequest = resourceApi.deleteResourceConfigs();
     const deleteRequest = await deleteConfigsRequest;
     await deleteRequest();
 
     // After patching requests, renew table (suggestion) data.
     refreshChecks();
-    disableButtons();
   } catch (error) {
     displayError(notificationContainer, error);
   }
