@@ -266,7 +266,6 @@ async function applySuggestions(suggestions: ResourceConfigPascalCase[]) {
 }
 
 async function resetConfigs() {
-  console.log("resetConfigs()");
   try {
     disableButtons();
     const deleteConfigsRequest = resourceApi.deleteResourceConfigs();
