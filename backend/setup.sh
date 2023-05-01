@@ -54,6 +54,6 @@ cp -p postgrescrutiniser.service /etc/systemd/system
 SECRET=$(echo $RANDOM | md5sum | head -c 20)
 echo "BACKEND_PORT=9090" > dev.env
 echo "JWT_SECRET_KEY=${SECRET}" >> dev.env
-mv dev.env /usr/local/postgrescrutiniser/
+cp dev.env /usr/local/postgrescrutiniser/
 
 echo "Setup completed without any errors."

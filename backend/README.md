@@ -4,10 +4,16 @@ This is the backend code for `PostgreScrutiniser`. It follows a basic folder str
 
 ## Starting project
 
-### Backend
-
+Project needs a `dev.env` file in the format of:
 ```
-go run ./backend/
+BACKEND_PORT=9090
+JWT_SECRET_KEY=example
+```
+This is just an example, these can be changed as needed.
+
+To actually run the project, issue the following command:
+```
+go run .
 ```
 
 ## Development
@@ -23,7 +29,7 @@ oapi-codegen -generate "types" -package ${NAME} api/${NAME}.yaml > web/${NAME}/$
 oapi-codegen -generate "gin" -package ${NAME} api/${NAME}.yaml > web/${NAME}/${NAME}Gin.go
 oapi-codegen -generate "spec" -package ${NAME} api/${NAME}.yaml > web/${NAME}/${NAME}Spec.go
 ```
-Change `example` to what code is actually being generated for.
+Change `NAME` argument to what code is actually being generated for.
 
 ### References
 
