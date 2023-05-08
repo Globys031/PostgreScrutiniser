@@ -1,15 +1,15 @@
 <template>
   <div class="g-button-container">
     <UiButton
-      :class="{ disabled: isLoadingList }"
-      @click="isLoadingList ? disabledButtonsNotification() : getBackups()"
+      :class="{ disabled: isLoading }"
+      @click="isLoading ? disabledButtonsNotification() : getBackups()"
       type="info"
       text="List backups"
     />
     <UiButton
-      :class="{ disabled: isLoadingList }"
+      :class="{ disabled: isLoading }"
       @click="
-        isLoadingList
+        isLoading
           ? disabledButtonsNotification()
           : modal.triggerModal(
               'Delete backups',
@@ -21,7 +21,7 @@
       type="warning"
       text="Delete backups"
     />
-    <UiSpinner v-if="isLoadingList" />
+    <UiSpinner v-if="isLoading" />
   </div>
 
   <template v-if="backups.length !== 0">
@@ -45,7 +45,7 @@
           <div class="content-container">
             <UiButton
               @click="
-                isLoadingList
+                isLoading
                   ? disabledButtonsNotification()
                   : modal.triggerModal(
                       'Restore backup',
@@ -59,7 +59,7 @@
             />
             <UiButton
               @click="
-                isLoadingList
+                isLoading
                   ? disabledButtonsNotification()
                   : modal.triggerModal(
                       'Delete backup file',
@@ -124,14 +124,13 @@ const notificationContainer = ref<UiNotificationContainer | null>(null);
 const backups = ref<BackupFile[]>([]);
 const fileDiff = ref<FileDiffLine[]>([]);
 
-const isLoadingList = ref<boolean>(false);
+const isLoading = ref<boolean>(false);
 
 async function getBackups() {
   try {
+    isLoading.value = true;
     const getRequest = await backupApi.getBackups();
-    isLoadingList.value = true;
     const { data } = await getRequest();
-    isLoadingList.value = false;
 
     // could be null after deleting all backups
     if (!data) {
@@ -155,9 +154,9 @@ async function getBackups() {
     backups.value = (data as unknown as BackupFile[]).reverse();
   } catch (error) {
     backups.value = [];
-    isLoadingList.value = false;
     displayError(notificationContainer, error);
   }
+  isLoading.value = false;
 }
 
 async function restoreBackup(backupName: string) {
@@ -169,6 +168,7 @@ async function restoreBackup(backupName: string) {
     return;
   }
   try {
+    isLoading.value = true;
     const restoreRequest = await backupApi.putBackup(backupName);
     await restoreRequest();
     displayNotification(
@@ -182,10 +182,12 @@ async function restoreBackup(backupName: string) {
   } catch (error) {
     displayError(notificationContainer, error);
   }
+  isLoading.value = false;
 }
 
 async function deleteBackups() {
   try {
+    isLoading.value = true;
     const deleteAllRequest = await backupApi.deleteBackups();
     await deleteAllRequest();
     displayNotification(
@@ -199,6 +201,7 @@ async function deleteBackups() {
   } catch (error) {
     displayError(notificationContainer, error);
   }
+  isLoading.value = false;
 }
 
 async function deleteBackup(backupName: string) {
@@ -210,6 +213,7 @@ async function deleteBackup(backupName: string) {
     return;
   }
   try {
+    isLoading.value = true;
     const deleteRequest = await backupApi.deleteBackup(backupName);
     await deleteRequest();
     displayNotification(
@@ -223,6 +227,7 @@ async function deleteBackup(backupName: string) {
   } catch (error) {
     displayError(notificationContainer, error);
   }
+  isLoading.value = false;
 }
 
 // Function for transforming data.time to a format of YYYY-MM-DD

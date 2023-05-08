@@ -41,7 +41,7 @@
       type="submit"
       :text="`Apply ${selectedChecks.length} suggestions`"
     />
-    <UiSpinner v-if="isLoadingConfigs" />
+    <UiSpinner v-if="isLoading" />
   </div>
 
   <template v-if="configChecks.length !== 0">
@@ -203,7 +203,7 @@ const notificationContainer = ref<UiNotificationContainer | null>(null);
 const configChecks = ref<ResourceConfigPascalCase[]>([]);
 const selectedChecks = ref<ResourceConfigPascalCase[]>([]);
 
-const isLoadingConfigs = ref<boolean>(false);
+const isLoading = ref<boolean>(false);
 
 const suggestions = computed(() => {
   const values = Object.values(configChecks.value);
@@ -219,8 +219,8 @@ const passedChecks = computed(() => {
 
 async function getSuggestions() {
   try {
+    isLoading.value = true;
     const getRequest = await resourceApi.getResourceConfigs();
-    isLoadingConfigs.value = true;
     const { data } = await getRequest();
     displayNotification(
       notificationContainer,
@@ -233,12 +233,13 @@ async function getSuggestions() {
     configChecks.value = [];
     displayError(notificationContainer, error);
   }
-  isLoadingConfigs.value = false;
+  isLoading.value = false;
   selectedChecks.value = [];
 }
 
 async function applySuggestions(suggestions: ResourceConfigPascalCase[]) {
   try {
+    isLoading.value = true;
     // Prepare suggestions for patch request
     const formattedSuggestions = suggestions.map(
       (suggestion: ResourceConfigPascalCase) => ({
@@ -263,10 +264,12 @@ async function applySuggestions(suggestions: ResourceConfigPascalCase[]) {
     displayError(notificationContainer, error);
     configChecks.value = []; // reset table to empty
   }
+  isLoading.value = false;
 }
 
 async function resetConfigs() {
   try {
+    isLoading.value = true;
     disableButtons();
     const deleteConfigsRequest = resourceApi.deleteResourceConfigs();
     const deleteRequest = await deleteConfigsRequest;
@@ -277,6 +280,7 @@ async function resetConfigs() {
   } catch (error) {
     displayError(notificationContainer, error);
   }
+  isLoading.value = false;
 }
 
 // After need configurations settings are applied, refresh settings table
